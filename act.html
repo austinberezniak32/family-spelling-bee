@@ -62,7 +62,13 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--violet);outline
 .chip b{font-family:var(--display);background:var(--bg);border-radius:999px;min-width:30px;text-align:center;padding:2px 8px;font-variant-numeric:tabular-nums}
 .dot{display:inline-block;width:12px;height:12px;border-radius:50%;flex:none;margin-right:6px;vertical-align:middle}
 .tm{flex:none;color:#fff;font-weight:800;font-size:13px;border-radius:10px;padding:0 10px;min-width:64px}
-.rosters{display:flex;flex-direction:column;gap:4px;background:var(--bg);border-radius:14px;padding:10px 14px}
+.teams{display:flex;flex-direction:column;gap:8px}
+.team-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg);border-radius:14px;padding:8px 10px 8px 12px}
+.team-row .team-tag{align-self:center;font-size:16px;padding:6px 14px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:44px;height:44px;border-radius:12px;background:var(--surface);box-shadow:inset 0 0 0 2px var(--edge);font-size:24px;font-weight:800}
+.stepper button:disabled{opacity:.35}
+.stepper b{font-family:var(--display);font-size:24px;min-width:28px;text-align:center}
 .team-tag{align-self:flex-start;color:#fff;font-weight:800;border-radius:999px;padding:4px 12px;font-size:14px}
 .chip.now{box-shadow:inset 0 0 0 3px var(--violet),var(--shadow)}
 .decks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
@@ -140,37 +146,29 @@ const DECKS=[
 ];
 DECKS.forEach(d=>{if(d.cards)d.cards=d.cards.split(",").map(c=>{const [t,e]=c.split("|");return {t:t.trim(),e:e||""}})});
 DECKS.find(d=>d.id==="mix").cards=DECKS.filter(d=>d.group==="kids"||d.group==="all").flatMap(d=>d.cards).filter((c,i,a)=>a.findIndex(x=>x.t===c.t)===i);
-const GROUPS=[["kids","For little actors","Every card has a picture, so non-readers can act too."],["all","For everyone",""],["grown","For grown-ups",""],["mix","Shuffle it up",""]];
+const GROUPS=[["kids","Picture decks","Every card has a picture, so anyone can act it out."],["all","For everyone",""],["grown","For grown-ups",""],["mix","Shuffle it up",""]];
 const TIMES=[30,60,90,120];
 
 /* ---------- State ---------- */
-const MAX_PLAYERS=12;
-let A={screen:"setup",players:[],team:[],mode:"teams",teamCount:2,time:60,tilt:true,turn:0,scores:{},deckId:null,cards:[],quitArmed:false};
+/* Setup only needs how many teams and how many people are on each one. */
+const TEAMS=[{name:"Red Rockets",short:"Red",c:"#E5484D"},{name:"Blue Comets",short:"Blue",c:"#2F7DF6"},{name:"Green Geckos",short:"Green",c:"#17A45F"},{name:"Gold Stars",short:"Gold",c:"#E0A100"}];
+const MIN_SIZE=2,MAX_SIZE=6;
+let A={screen:"setup",teamCount:2,sizes:[3,3,3,3],time:60,tilt:true,turn:0,scores:{},deckId:null,cards:[],quitArmed:false};
 try{
   const s=JSON.parse(localStorage.getItem("act-setup")||"null");
-  if(s&&Array.isArray(s.players)&&s.players.length){A.players=s.players.slice(0,MAX_PLAYERS);if(TIMES.includes(s.time))A.time=s.time;if(typeof s.tilt==="boolean")A.tilt=s.tilt;if(Array.isArray(s.team))A.team=s.team;if(s.mode==="solo")A.mode="solo";if([2,3,4].includes(s.teamCount))A.teamCount=s.teamCount}
-  else{const b=JSON.parse(localStorage.getItem("bee-setup")||"null");if(b&&b.players)A.players=b.players.map(p=>p.name).filter(Boolean).slice(0,MAX_PLAYERS)}
+  if(s){if(TIMES.includes(s.time))A.time=s.time;if(typeof s.tilt==="boolean")A.tilt=s.tilt;if([2,3,4].includes(s.teamCount))A.teamCount=s.teamCount;
+    if(Array.isArray(s.sizes)&&s.sizes.length===4&&s.sizes.every(n=>n>=MIN_SIZE&&n<=MAX_SIZE))A.sizes=s.sizes}
 }catch(e){}
-if(!A.players.length)A.players=["Player 1","Player 2","Player 3","Player 4"];
-try{const g=JSON.parse(localStorage.getItem("act-game")||"null");if(g&&g.scores){A.scores=g.scores;A.turn=g.turn||0;A.screen="pick"}}catch(e){}
+try{const g=JSON.parse(localStorage.getItem("act-game")||"null");if(g&&g.scores&&g.v===2){A.scores=g.scores;A.turn=g.turn||0;A.screen="pick"}}catch(e){}
 let used={};try{used=JSON.parse(localStorage.getItem("act-used")||"{}")}catch(e){}
-const saveSetup=()=>{try{localStorage.setItem("act-setup",JSON.stringify({players:A.players,team:A.team,mode:A.mode,teamCount:A.teamCount,time:A.time,tilt:A.tilt}))}catch(e){}};
-const saveGame=()=>{try{if(A.screen==="setup")localStorage.removeItem("act-game");else localStorage.setItem("act-game",JSON.stringify({scores:A.scores,turn:A.turn}))}catch(e){}};
+const saveSetup=()=>{try{localStorage.setItem("act-setup",JSON.stringify({teamCount:A.teamCount,sizes:A.sizes,time:A.time,tilt:A.tilt}))}catch(e){}};
+const saveGame=()=>{try{if(A.screen==="setup")localStorage.removeItem("act-game");else localStorage.setItem("act-game",JSON.stringify({v:2,scores:A.scores,turn:A.turn}))}catch(e){}};
 const saveUsed=()=>{try{localStorage.setItem("act-used",JSON.stringify(used))}catch(e){}};
-const names=()=>A.players.map(n=>n.trim()).filter(Boolean);
-/* Teams: each player has a team number. Teams take turns; within a team the guesser rotates.
-   Solo: every player is their own "team". Scores are kept per team (or per player in solo). */
-const TEAMS=[{name:"Red Rockets",c:"#E5484D"},{name:"Blue Comets",c:"#2F7DF6"},{name:"Green Geckos",c:"#17A45F"},{name:"Gold Stars",c:"#E0A100"}];
-function fixTeams(){A.players.forEach((_,i)=>{if(!(A.team[i]>=0&&A.team[i]<A.teamCount))A.team[i]=i%A.teamCount});A.team.length=A.players.length}
-function units(){
-  if(A.mode==="solo")return names().map(n=>({name:n,members:[n],c:null}));
-  fixTeams();
-  return TEAMS.slice(0,A.teamCount).map((t,k)=>({name:t.name,c:t.c,members:A.players.map((p,i)=>A.team[i]===k?p.trim():"").filter(Boolean)})).filter(u=>u.members.length);
-}
+/* Teams take turns. Within a team the guesser rotates: player 1, then 2, and so on. */
+function units(){return TEAMS.slice(0,A.teamCount).map((t,k)=>({name:t.name,short:t.short,c:t.c,size:A.sizes[k]}))}
 const unitAt=t=>{const u=units();return u[t%u.length]};
-const guesserAt=t=>{const u=units(),un=u[t%u.length];return un.members[Math.floor(t/u.length)%un.members.length]};
+const guesserAt=t=>{const u=units(),un=u[t%u.length];return `${un.short} player ${Math.floor(t/u.length)%un.size+1}`};
 const unitNow=()=>unitAt(A.turn),guesser=()=>guesserAt(A.turn);
-const teamOk=()=>A.mode==="solo"?names().length>=2:units().length>=2&&units().every(u=>u.members.length>=2);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const $=id=>document.getElementById(id);
 const app=$("app"),stage=$("stage");
@@ -178,62 +176,54 @@ const app=$("app"),stage=$("stage");
 /* ---------- Screens ---------- */
 const MASKS=`<svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 10c8 3 18 3 26 0v16c0 10-6 17-13 17S6 36 6 26z" fill="#6C3FE8"/><circle cx="13" cy="22" r="3" fill="#fff"/><circle cx="25" cy="22" r="3" fill="#fff"/><path d="M12 31c4 4 10 4 14 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M30 22c8 3 18 3 28 0v16c0 10-6 17-14 17s-14-7-14-17z" fill="#FF6B5A"/><circle cx="38" cy="34" r="3" fill="#fff"/><circle cx="50" cy="34" r="3" fill="#fff"/><path d="M37 46c4-4 10-4 14 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`;
 const dot=c=>c?`<span class="dot" style="background:${c}"></span>`:"";
-const rosters=()=>units().map(u=>`<div>${dot(u.c)}<b>${u.name}</b> <span class="muted">${u.members.map(esc).join(", ")}</span></div>`).join("");
 const chips=()=>{const u=units();return `<div class="chips">${u.map((x,i)=>`<span class="chip ${i===A.turn%u.length?"now":""}">${dot(x.c)}${esc(x.name)}<b>${A.scores[x.name]||0}</b></span>`).join("")}</div>`};
 
 function render(){({setup:renderSetup,pick:renderPick,ready:renderReady,recap:renderRecap,end:renderEnd})[A.screen]();scrollTo(0,0)}
 
 function renderSetup(){
-  fixTeams();
-  const n=names().length;
+  const total=units().reduce((n,u)=>n+u.size,0);
   app.innerHTML=`
   <a class="home" href="./">‹ All games</a>
-  <header class="brand">${MASKS}<div><h1>Charade Parade</h1><p>Hold it to your forehead. Everyone else acts it out.</p></div></header>
+  <header class="brand">${MASKS}<div><h1>Charade Parade</h1><p>Hold it to your forehead. Your team acts it out.</p></div></header>
   <section class="card">
-    <div class="row between"><div class="label">Who's playing?</div><span class="muted">${n} player${n===1?"":"s"}</span></div>
-    <div class="seg"><button data-mode="teams" aria-pressed="${A.mode==="teams"}">Teams</button><button data-mode="solo" aria-pressed="${A.mode==="solo"}">Everyone for themselves</button></div>
-    ${A.mode==="teams"?`<div class="label">How many teams?</div><div class="seg">${[2,3,4].map(k=>`<button data-tc="${k}" aria-pressed="${A.teamCount===k}">${k} teams</button>`).join("")}</div>
-    <p class="muted">Tap the colored button next to a name to move that player to another team.</p>`:""}
-    <div class="players">${A.players.map((p,i)=>`<div class="player">${A.mode==="teams"?`<button class="tm" data-tm="${i}" style="background:${TEAMS[A.team[i]].c}" aria-label="${esc(p)} is on ${TEAMS[A.team[i]].name}, tap to change">${TEAMS[A.team[i]].name.split(" ")[0]}</button>`:""}<input value="${esc(p)}" data-i="${i}" aria-label="Player ${i+1} name" maxlength="16"><button class="remove" data-rm="${i}" aria-label="Remove ${esc(p)}" ${A.players.length<=2?"disabled":""}>×</button></div>`).join("")}</div>
-    ${A.players.length<MAX_PLAYERS?`<button class="btn ghost small" id="add">+ Add a player</button>`:""}
+    <div class="label">How many teams?</div>
+    <div class="seg">${[2,3,4].map(k=>`<button data-tc="${k}" aria-pressed="${A.teamCount===k}">${k} teams</button>`).join("")}</div>
+    <div class="row between"><div class="label">People on each team</div><span class="muted">${total} playing</span></div>
+    <div class="teams">${units().map((u,k)=>`
+      <div class="team-row"><span class="team-tag" style="background:${u.c}">${u.name}</span>
+        <div class="stepper"><button data-sz="${k}" data-d="-1" aria-label="Fewer on ${u.name}" ${u.size<=MIN_SIZE?"disabled":""}>−</button><b>${u.size}</b><button data-sz="${k}" data-d="1" aria-label="More on ${u.name}" ${u.size>=MAX_SIZE?"disabled":""}>+</button></div></div>`).join("")}</div>
     <div class="label">Seconds per turn</div>
     <div class="seg">${TIMES.map(t=>`<button data-t="${t}" aria-pressed="${A.time===t}">${t}</button>`).join("")}</div>
     <div class="label">Answer by</div>
     <div class="seg"><button data-tilt="1" aria-pressed="${A.tilt}">Tilt or tap</button><button data-tilt="0" aria-pressed="${!A.tilt}">Tap only</button></div>
-    ${A.mode==="teams"?`<div class="rosters" id="rost">${rosters()}</div>`:""}
-    <p class="muted" id="warn" ${teamOk()?"hidden":""}>${A.mode==="teams"?"Every team needs at least 2 players: one to guess and one to act.":"Add at least 2 players."}</p>
-    <button class="btn big" id="go" ${teamOk()?"":"disabled"}>Let's play</button>
+    <button class="btn big" id="go">Let's play</button>
   </section>
   <section class="card">
     <div class="label">How to play</div>
     <ul class="rules">
+      <li>Split into teams and decide who is player 1, player 2, and so on, on each team.</li>
       <li>On your turn, pick a deck and hold the tablet on your forehead, screen facing out. Don't peek!</li>
-      <li>Your teammates act out, describe, or hum the word on the screen. No saying the word! (Playing without teams? Everyone helps.)</li>
-      <li>Guessed it? Tilt the screen down to the floor. Want to pass? Tilt it up to the ceiling.</li>
-      <li>Or just tap: right side for got it, left side for pass.</li>
-      <li>Each word you guess is a point for your team. Then the next team takes a turn, and teammates take turns guessing.</li>
+      <li>Your teammates act out, describe, or hum the word on the screen. No saying the word!</li>
+      <li>Guessed it? Tilt the screen down to the floor. Want to pass? Tilt it up to the ceiling. Or just tap: right side for got it, left side for pass.</li>
+      <li>Each word you guess is a point for your team. Then the next team goes, and teammates take turns guessing.</li>
     </ul>
   </section>`;
-  app.querySelectorAll("input[data-i]").forEach(el=>{el.oninput=()=>{A.players[+el.dataset.i]=el.value;saveSetup();$("go").disabled=!teamOk();$("warn").hidden=teamOk();const r=$("rost");if(r)r.innerHTML=rosters()}});
-  app.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{A.players.splice(+b.dataset.rm,1);A.team.splice(+b.dataset.rm,1);saveSetup();render()});
-  app.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{A.mode=b.dataset.mode;saveSetup();render()});
-  app.querySelectorAll("[data-tc]").forEach(b=>b.onclick=()=>{A.teamCount=+b.dataset.tc;A.team=A.players.map((_,i)=>i%A.teamCount);saveSetup();render()});
-  app.querySelectorAll("[data-tm]").forEach(b=>b.onclick=()=>{const i=+b.dataset.tm;A.team[i]=(A.team[i]+1)%A.teamCount;saveSetup();render()});
-  const add=$("add");if(add)add.onclick=()=>{A.players.push("Player "+(A.players.length+1));{const cnt=Array.from({length:A.teamCount},(_,k)=>A.team.filter(t=>t===k).length);A.team.push(cnt.indexOf(Math.min(...cnt)))}saveSetup();render();const ins=app.querySelectorAll("input[data-i]");ins[ins.length-1].select()};
+  app.querySelectorAll("[data-tc]").forEach(b=>b.onclick=()=>{A.teamCount=+b.dataset.tc;saveSetup();render()});
+  app.querySelectorAll("[data-sz]").forEach(b=>b.onclick=()=>{const k=+b.dataset.sz;A.sizes[k]=Math.min(MAX_SIZE,Math.max(MIN_SIZE,A.sizes[k]+ +b.dataset.d));saveSetup();render()});
   app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{A.time=+b.dataset.t;saveSetup();render()});
   app.querySelectorAll("[data-tilt]").forEach(b=>b.onclick=()=>{A.tilt=b.dataset.tilt==="1";saveSetup();render()});
-  $("go").onclick=()=>{if(!teamOk())return;const keep=A.players.map((p,i)=>[p.trim(),A.team[i]]).filter(x=>x[0]);A.players=keep.map(x=>x[0]);A.team=keep.map(x=>x[1]);saveSetup();A.scores={};A.turn=0;A.screen="pick";saveGame();render()};
+  $("go").onclick=()=>{A.scores={};A.turn=0;A.screen="pick";saveGame();render()};
 }
 
 function renderPick(){
-  const g=guesser(),u=unitNow(),round=Math.floor(A.turn/units().length)+1,team=A.mode==="teams";
+  const g=guesser(),u=unitNow(),round=Math.floor(A.turn/units().length)+1;
   app.innerHTML=`
   ${chips()}
   <section class="card turn">
     <div class="row between"><span class="label">Round ${round}</span><button class="btn ghost small" id="end">Final scores</button></div>
-    ${team?`<span class="team-tag" style="background:${u.c}">${u.name}</span>`:""}
+    <span class="team-tag" style="background:${u.c}">${u.name}</span>
     <h2>${esc(g)}, you're guessing!</h2>
-    <p class="muted">${team?`Pick a deck. ${esc(u.members.filter(m=>m!==g).join(", "))} will act it out.`:"Pick a deck. Everyone else gets ready to act."}</p>
+    <p class="muted">Pick a deck. The rest of the ${u.name} get ready to act it out.</p>
     ${GROUPS.map(([gid,title,note])=>`
       <div class="group-title">${title}</div>${note?`<p class="muted">${note}</p>`:""}
       <div class="decks">${DECKS.filter(d=>d.group===gid).map(d=>`<button class="deck" data-d="${d.id}"><span class="em">${d.em}</span><b>${d.name}</b><small>${d.blurb}</small></button>`).join("")}</div>`).join("")}
@@ -250,7 +240,7 @@ function renderReady(){
     <span class="label">${d.em} ${d.name}</span>
     <h2>${esc(guesser())}, hold the tablet on your forehead</h2>
     <div class="hold"><svg width="90" height="90" viewBox="0 0 90 90" aria-hidden="true"><circle cx="45" cy="52" r="26" fill="#FFD7B5"/><rect x="18" y="10" width="54" height="30" rx="6" fill="#6C3FE8"/><rect x="23" y="15" width="44" height="20" rx="3" fill="#fff"/><circle cx="36" cy="56" r="3" fill="#1E1B3A"/><circle cx="54" cy="56" r="3" fill="#1E1B3A"/><path d="M38 66c4 3 10 3 14 0" stroke="#1E1B3A" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
-    <p class="muted">Turn it sideways with the screen facing ${A.mode==="teams"?"your team":"your family"}. ${A.tilt?"Tilt down when you get it, tilt up to pass. ":""}You can always tap: right side got it, left side pass.</p></div>
+    <p class="muted">Turn it sideways with the screen facing your team. ${A.tilt?"Tilt down when you get it, tilt up to pass. ":""}You can always tap: right side got it, left side pass.</p></div>
     <button class="btn big" id="start">Start ${A.time} seconds</button>
     <button class="btn ghost small" id="back">Pick a different deck</button>
   </section>`;
@@ -259,10 +249,10 @@ function renderReady(){
 }
 
 function renderRecap(){
-  const g=guesser(),u=unitNow(),got=A.cards.filter(c=>c.ok).length,nu=unitAt(A.turn+1),ng=guesserAt(A.turn+1),nextName=A.mode==="teams"?`${nu.name} (${ng} guesses)`:ng;
+  const g=guesser(),u=unitNow(),got=A.cards.filter(c=>c.ok).length,nu=unitAt(A.turn+1),ng=guesserAt(A.turn+1),nextName=`${nu.name} (${ng} guesses)`;
   app.innerHTML=`
   <section class="card turn" style="align-items:center;text-align:center">
-    <span class="label">${A.mode==="teams"?esc(u.name)+" got":esc(g)+" got"}</span>
+    <span class="label">${esc(u.name)} got</span>
     <div class="score-big">${got}</div>
     <p class="muted">${got===0?"Tough deck! Next time.":got<4?"Nice work!":got<8?"Great guessing!":"Superstar!"} Tap a word to fix it if it was marked wrong.</p>
   </section>
