@@ -1,5 +1,5 @@
 // Offline support: keep every app file on the device. Bump VERSION when files change.
-const VERSION = "family-bee-v8";
+const VERSION = "family-bee-v9";
 const FILES = ["./", "index.html", "manifest.webmanifest", "fonts/fredoka.woff2", "fonts/nunito.woff2",
   "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png"];
 self.addEventListener("install", e => {
