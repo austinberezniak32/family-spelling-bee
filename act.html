@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#6C3FE8">
+<meta name="description" content="Charade Parade: hold the tablet to your forehead while everyone acts it out.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<title>Charade Parade</title>
+<style>
+@font-face{font-family:"Fredoka";src:url(fonts/fredoka.woff2) format("woff2");font-weight:300 700;font-display:swap}
+@font-face{font-family:"Nunito";src:url(fonts/nunito.woff2) format("woff2");font-weight:200 1000;font-display:swap}
+:root{
+  --bg:#F2EEFB; --surface:#fff; --ink:#1E1B3A; --muted:#5d5880; --edge:#d6cfee;
+  --violet:#6C3FE8; --violet-deep:#4B23C2; --violet-soft:#E8E0FF;
+  --coral:#FF6B5A; --good:#17A45F; --pass:#F08A24;
+  --shadow:0 2px 0 rgba(30,27,58,.08),0 8px 24px rgba(30,27,58,.08);
+  --display:"Fredoka","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13112a; --surface:#1f1c3d; --ink:#f0eefc; --muted:#aaa4d0; --edge:#2f2a57;
+  --violet:#8B66FF; --violet-deep:#8B66FF; --violet-soft:#2c2560; --shadow:0 2px 0 rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13112a; --surface:#1f1c3d; --ink:#f0eefc; --muted:#aaa4d0; --edge:#2f2a57;
+  --violet:#8B66FF; --violet-deep:#8B66FF; --violet-soft:#2c2560; --shadow:0 2px 0 rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 32px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.1;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer;border:0;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:3px solid var(--violet);outline-offset:2px}
+.home{align-self:flex-start;color:var(--muted);font-weight:800;text-decoration:none;padding:6px 12px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:12px}
+.brand h1{font-size:clamp(28px,7vw,40px);font-weight:700}
+.brand p{margin:0;color:var(--muted);font-weight:700}
+.card{background:var(--surface);border-radius:22px;box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:14px}
+.label{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted);margin:0;font-weight:600}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between}
+.btn{background:var(--violet);color:#fff;font-family:var(--display);font-weight:600;font-size:20px;padding:14px 22px;border-radius:16px;box-shadow:0 4px 0 var(--violet-deep);transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--violet-deep)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--edge)}
+.btn.small{font-size:16px;padding:10px 14px;border-radius:12px}
+.btn.big{font-size:24px;padding:18px 28px;width:100%}
+.btn:disabled{opacity:.5}
+.players{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.player{display:flex;gap:6px;background:var(--bg);border-radius:14px;padding:6px}
+.player input{flex:1;min-width:0;font:inherit;font-weight:800;font-size:17px;color:var(--ink);background:var(--surface);border:2px solid var(--edge);border-radius:10px;padding:8px 10px}
+.remove{background:transparent;color:var(--muted);font-size:24px;width:40px;border-radius:10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:70px;background:var(--bg);border-radius:12px;padding:10px;font-weight:800;box-shadow:inset 0 0 0 2px var(--edge)}
+.seg button[aria-pressed="true"]{background:var(--violet-soft);box-shadow:inset 0 0 0 3px var(--violet)}
+.rules{margin:0;padding-left:20px;color:var(--muted);font-weight:600}
+.rules li+li{margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:6px 8px 6px 14px;box-shadow:var(--shadow);font-weight:800}
+.chip b{font-family:var(--display);background:var(--bg);border-radius:999px;min-width:30px;text-align:center;padding:2px 8px;font-variant-numeric:tabular-nums}
+.chip.now{box-shadow:inset 0 0 0 3px var(--violet),var(--shadow)}
+.decks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.deck{background:var(--bg);border-radius:18px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;box-shadow:inset 0 0 0 2px var(--edge);line-height:1.15}
+.deck:active{transform:scale(.97)}
+.deck .em{font-size:40px;line-height:1}
+.deck b{font-family:var(--display);font-weight:600;font-size:18px}
+.deck small{color:var(--muted);font-weight:700;font-size:12px}
+.group-title{font-family:var(--display);font-weight:600;font-size:19px;margin-top:4px}
+.turn h2{font-size:clamp(28px,7vw,40px)}
+.hold{display:flex;gap:16px;align-items:center}
+.hold svg{flex:none}
+.recap{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+.recap button{width:100%;display:flex;align-items:center;gap:8px;text-align:left;background:var(--bg);border-radius:12px;padding:10px 12px;font-weight:800}
+.recap .mark{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:15px}
+.recap .ok .mark{background:var(--good)}
+.recap .no .mark{background:var(--pass)}
+.recap .no{color:var(--muted)}
+.score-big{font-family:var(--display);font-size:64px;font-weight:700;color:var(--violet);line-height:1}
+.podium{display:flex;flex-direction:column;gap:8px}
+.place{display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:14px;padding:10px 14px;font-weight:800;font-size:18px}
+.place .medal{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--edge);font-family:var(--display)}
+.place.first .medal{background:#FFC83D;color:#1E1B3A}
+.place .pts{margin-left:auto;font-family:var(--display);font-size:22px}
+
+/* Play screen: covers everything, readable from across the room */
+#stage{position:fixed;inset:0;z-index:10;background:var(--violet);color:#fff;display:flex;flex-direction:column;user-select:none;-webkit-user-select:none;touch-action:none;transition:background .15s}
+#stage.good{background:var(--good)}
+#stage.pass{background:var(--pass)}
+#stage.over{background:var(--coral)}
+.st-top{display:flex;justify-content:space-between;align-items:center;padding:max(12px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));font-family:var(--display);font-weight:600;font-size:clamp(20px,4vw,34px);position:relative;z-index:2;pointer-events:none}
+.st-top>*{pointer-events:auto}
+.timer{background:rgba(0,0,0,.18);border-radius:999px;padding:4px 18px;font-variant-numeric:tabular-nums}
+.timer.low{background:#fff;color:var(--coral)}
+.stop{background:rgba(0,0,0,.18);color:#fff;border-radius:999px;padding:8px 16px;font-family:var(--body);font-weight:800;font-size:16px}
+.st-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;text-align:center;gap:2vh;min-height:0}
+.st-emoji{font-size:min(22vh,22vw);line-height:1}
+.st-word{font-family:var(--display);font-weight:700;line-height:1.05;max-width:100%;overflow-wrap:break-word}
+.st-hint{font-weight:800;opacity:.85;font-size:clamp(16px,2.6vw,24px)}
+.zones{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;z-index:1}
+.zones button{background:transparent;color:rgba(255,255,255,.85);font-family:var(--display);font-weight:600;font-size:clamp(18px,3vw,28px);display:flex;align-items:flex-end;padding:0 0 max(18px,env(safe-area-inset-bottom,0px));justify-content:center}
+.zones button:active{background:rgba(255,255,255,.12)}
+
+.big-count{font-family:var(--display);font-weight:700;font-size:min(40vh,40vw);line-height:1}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:20}
+@media (prefers-reduced-motion: reduce){#stage{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<main class="wrap" id="app"></main>
+<div id="stage" hidden></div>
+
+<script>
+/* ---------- Decks ----------
+   Kid decks show a picture on every card so a 5 year old can act it out without reading.
+   Format: "word|emoji" (emoji optional). */
+const DECKS=[
+ {id:"critters",name:"Critter Crew",em:"🐾",group:"kids",blurb:"Animals to act out",cards:"Dog|🐶,Cat|🐱,Elephant|🐘,Monkey|🐒,Lion|🦁,Snake|🐍,Frog|🐸,Penguin|🐧,Kangaroo|🦘,Chicken|🐔,Duck|🦆,Horse|🐴,Cow|🐮,Pig|🐷,Bunny|🐰,Bear|🐻,Fish|🐟,Shark|🦈,Crab|🦀,Bird|🐦,Owl|🦉,Butterfly|🦋,Bee|🐝,Spider|🕷️,Turtle|🐢,Dinosaur|🦖,Giraffe|🦒,Gorilla|🦍,Mouse|🐭,Dolphin|🐬,Whale|🐳,Octopus|🐙,Kitten|🐈,Puppy|🐕,Sheep|🐑,Goat|🐐,Turkey|🦃,Bat|🦇,Squirrel|🐿️,Crocodile|🐊,Flamingo|🦩,Zebra|🦓,Unicorn|🦄,Worm|🪱,Snail|🐌,Peacock|🦚,Sloth|🦥,Skunk|🦨"},
+ {id:"wiggle",name:"Wiggle & Do",em:"🤸",group:"kids",blurb:"Things you do",cards:"Brushing teeth|🪥,Jumping|🦘,Sleeping|😴,Swimming|🏊,Dancing|💃,Eating spaghetti|🍝,Riding a bike|🚲,Climbing a tree|🌳,Taking a bath|🛁,Kicking a ball|⚽,Throwing a ball|⚾,Flying a kite|🪁,Reading a book|📖,Painting|🎨,Sneezing|🤧,Laughing|😂,Crying|😢,Hopping on one foot|🦶,Blowing bubbles|🫧,Hugging|🤗,Waving hello|👋,Clapping|👏,Washing hands|🧼,Getting dressed|👕,Licking ice cream|🍦,Building a sandcastle|🏖️,Fishing|🎣,Skating|⛸️,Playing the drums|🥁,Playing guitar|🎸,Singing|🎤,Brushing hair|💇,Yawning|🥱,Driving a car|🚗,Rowing a boat|🚣,Snowball fight|☃️,Jumping rope|🪢,Tiptoeing|🤫,Blowing out candles|🎂,Taking a photo|📷,Talking on the phone|📞,Hula hoop|⭕,Doing a cartwheel|🤸,Making a snow angel|❄️"},
+ {id:"snacks",name:"Snack Shack",em:"🍕",group:"kids",blurb:"Food and treats",cards:"Pizza|🍕,Banana|🍌,Apple|🍎,Ice cream|🍦,Hot dog|🌭,Hamburger|🍔,Spaghetti|🍝,Popcorn|🍿,Cookie|🍪,Cake|🍰,Pancakes|🥞,Egg|🥚,Carrot|🥕,Corn on the cob|🌽,Watermelon|🍉,Grapes|🍇,Strawberry|🍓,Cheese|🧀,Bread|🍞,Taco|🌮,Lollipop|🍭,Donut|🍩,Cupcake|🧁,Milk|🥛,Lemon|🍋,French fries|🍟,Pretzel|🥨,Broccoli|🥦,Peanut butter sandwich|🥪,Cereal|🥣,Pie|🥧,Chocolate|🍫,Orange|🍊,Pineapple|🍍,Soup|🍲,Bacon|🥓,Chicken nuggets|🍗,Cotton candy|🍬,Marshmallow|🔥,Coconut|🥥,Pickle|🥒,Waffle|🧇"},
+ {id:"dressup",name:"Dress-Up Box",em:"👑",group:"kids",blurb:"Who am I pretending to be?",cards:"Pirate|🏴‍☠️,Princess|👸,King|🤴,Astronaut|👩‍🚀,Firefighter|🧑‍🚒,Police officer|👮,Doctor|🩺,Chef|👨‍🍳,Teacher|🧑‍🏫,Farmer|🧑‍🌾,Superhero|🦸,Wizard|🧙,Fairy|🧚,Mermaid|🧜,Robot|🤖,Ghost|👻,Monster|👹,Clown|🤡,Cowboy|🤠,Knight|🛡️,Ninja|🥷,Ballerina|🩰,Zombie|🧟,Vampire|🧛,Baby|👶,Grandpa|👴,Mail carrier|📬,Dentist|🦷,Magician|🎩,Scientist|🧪,Construction worker|👷,Pilot|✈️,Lifeguard|🛟,Rock star|🎸,Bus driver|🚌,Witch|🧹,Snowman|⛄,Santa Claus|🎅,Tooth fairy|🧚‍♀️,Elf|🧝"},
+ {id:"home",name:"Stuff at Home",em:"🧸",group:"kids",blurb:"Things in your house",cards:"Teddy bear|🧸,Toothbrush|🪥,Bed|🛏️,Chair|🪑,Door|🚪,Window|🪟,Phone|📱,TV|📺,Lamp|💡,Clock|⏰,Umbrella|☂️,Broom|🧹,Toilet|🚽,Shower|🚿,Pillow|🛌,Blanket|🧣,Shoes|👟,Hat|🧢,Backpack|🎒,Scissors|✂️,Crayon|🖍️,Ball|⚽,Balloon|🎈,Book|📚,Spoon|🥄,Cup|🥤,Key|🔑,Basket|🧺,Mirror|🪞,Vacuum|🧽,Computer|💻,Candle|🕯️,Present|🎁,Soap|🧼,Socks|🧦,Glasses|👓,Hammer|🔨,Fridge|🧊,Light switch|💡,Puzzle|🧩"},
+ {id:"vroom",name:"Vroom & Zoom",em:"🚗",group:"kids",blurb:"Things that go",cards:"Car|🚗,Bus|🚌,Train|🚂,Airplane|✈️,Helicopter|🚁,Rocket|🚀,Boat|⛵,Bicycle|🚲,Motorcycle|🏍️,Fire truck|🚒,Ambulance|🚑,Police car|🚓,Tractor|🚜,Dump truck|🚚,School bus|🚌,Submarine|🌊,Skateboard|🛹,Scooter|🛴,Hot air balloon|🎈,Roller coaster|🎢,Taxi|🚕,Race car|🏎️,Sailboat|⛵,Canoe|🛶,Sled|🛷,Garbage truck|🗑️,Ice cream truck|🍦,Tow truck|🛻,Spaceship|🛸,Horse and carriage|🐎,Wagon|🛒,Elevator|🛗,Escalator|🪜,Parachute|🪂,Jet ski|🌊"},
+ {id:"story",name:"Storybook Friends",em:"📚",group:"all",blurb:"Characters from books, shows and tales",cards:"Cinderella|👠,Santa Claus|🎅,The Easter Bunny|🐰,Spider-Man|🕷️,Superman|🦸,Batman|🦇,Mickey Mouse|🐭,SpongeBob|🧽,Elsa|❄️,Peter Pan|🧚,Captain Hook|🪝,Little Red Riding Hood|🧺,The Big Bad Wolf|🐺,Goldilocks|🐻,Jack and the Beanstalk|🌱,Humpty Dumpty|🥚,The Three Little Pigs|🐷,Snow White|🍎,Rapunzel|💇‍♀️,Pinocchio|🤥,The Grinch|🎄,Frosty the Snowman|⛄,Rudolph|🦌,Shrek|🟢,Winnie the Pooh|🍯,Cookie Monster|🍪,Mario|🍄,Pikachu|⚡,Harry Potter|🪄,Darth Vader|🌌,Scooby-Doo|🐕,Bluey|🐶,Peppa Pig|🐷,Paw Patrol|🐾,The Cat in the Hat|🎩,Curious George|🐒,Tinker Bell|✨,Buzz Lightyear|🚀,Woody the cowboy|🤠,Nemo|🐠,Simba|🦁,Olaf|☃️,Sonic the Hedgehog|💨,Minions|🍌"},
+ {id:"gameon",name:"Game On",em:"⚽",group:"all",blurb:"Sports and games",cards:"Soccer|⚽,Basketball|🏀,Football|🏈,Baseball|⚾,Tennis|🎾,Golf|⛳,Bowling|🎳,Swimming|🏊,Skiing|⛷️,Snowboarding|🏂,Surfing|🏄,Boxing|🥊,Karate|🥋,Gymnastics|🤸,Hockey|🏒,Volleyball|🏐,Ping pong|🏓,Archery|🏹,Wrestling|🤼,Weightlifting|🏋️,Ice skating|⛸️,Hide and seek|🙈,Tag|🏃,Hopscotch|🔢,Tug of war|🪢,Musical chairs|🪑,Freeze dance|🕺,Duck duck goose|🦆,Simon says|🗣️,Rock paper scissors|✂️,Jenga|🧱,Video games|🎮,Cards|🃏,Chess|♟️,Fishing|🎣,Horse riding|🏇,Rock climbing|🧗,Yoga|🧘,Marathon|🏅,Cheerleading|📣,Skateboarding|🛹,Dodgeball|🔴"},
+ {id:"holiday",name:"Holiday Hoopla",em:"🦃",group:"all",blurb:"Thanksgiving, holidays and seasons",cards:"Turkey dinner|🦃,Pumpkin pie|🥧,Mashed potatoes|🥔,Parade|🎉,Football on TV|🏈,Saying thanks|🙏,Pilgrim|🎩,Wishbone|🦴,Leaf pile|🍂,Raking leaves|🍁,Christmas tree|🎄,Wrapping presents|🎁,Snowman|⛄,Reindeer|🦌,Hot cocoa|☕,Candy cane|🍬,Hanukkah candles|🕎,Fireworks|🎆,New Year's countdown|🕛,Valentine|💌,Easter egg hunt|🥚,Trick-or-treat|🎃,Jack-o'-lantern|🎃,Birthday party|🎂,Fourth of July|🇺🇸,Beach day|🏖️,Sledding|🛷,Building a fort|🏰,Camping trip|⛺,Gingerbread house|🏠,Caroling|🎶,Mistletoe|🌿,Elf on the shelf|🧝,Stuffing|🍞,Cranberry sauce|🍒,Food coma|😴,Nap on the couch|🛋️,Family photo|📸,Black Friday shopping|🛍️,Spring flowers|🌷,Rainy day|🌧️"},
+ {id:"world",name:"Around the World",em:"🌍",group:"all",blurb:"Places and wonders",cards:"Beach|🏖️,Mountain|⛰️,Volcano|🌋,Desert|🏜️,Jungle|🌴,North Pole|🧊,Zoo|🦓,Farm|🚜,Castle|🏰,Pyramids|🔺,Eiffel Tower|🗼,Statue of Liberty|🗽,Grand Canyon|🏞️,Moon|🌙,Space|🪐,Ocean|🌊,Waterfall|💦,Rainbow|🌈,Tornado|🌪️,Thunderstorm|⛈️,Snowstorm|🌨️,Earthquake|🫨,Island|🏝️,Cave|🕳️,Hospital|🏥,School|🏫,Library|📚,Airport|🛫,Movie theater|🎬,Amusement park|🎡,Circus|🎪,Playground|🛝,Haunted house|🏚️,Aquarium|🐠,Museum|🏛️,Grocery store|🛒,Igloo|❄️,Treehouse|🌳,Pizza shop|🍕,Swimming pool|🏊"},
+ {id:"movies",name:"Movie Marathon",em:"🎬",group:"grown",blurb:"Famous movies",cards:"Titanic,Jaws,Star Wars,Jurassic Park,The Wizard of Oz,Frozen,The Lion King,Toy Story,Finding Nemo,Home Alone,E.T.,Back to the Future,Ghostbusters,Rocky,The Karate Kid,Top Gun,Forrest Gump,Mrs. Doubtfire,The Sound of Music,Mary Poppins,Grease,Dirty Dancing,Elf,Despicable Me,Up,Cars,Shrek,The Incredibles,Ratatouille,Moana,Encanto,Inside Out,Spider-Man,The Avengers,Harry Potter,Lord of the Rings,Pirates of the Caribbean,Indiana Jones,King Kong,Godzilla,Mean Girls,The Godfather,Twister,Night at the Museum,Kung Fu Panda,Barbie,Wicked,Beauty and the Beast,Aladdin,The Little Mermaid"},
+ {id:"hum",name:"Hum a Tune",em:"🎵",group:"grown",blurb:"Hum it, sing it, dance it",cards:"Happy Birthday,Jingle Bells,Twinkle Twinkle Little Star,Old MacDonald,Baby Shark,The Wheels on the Bus,Row Row Row Your Boat,If You're Happy and You Know It,Let It Go,Take Me Out to the Ball Game,The Star-Spangled Banner,YMCA,The Macarena,The Chicken Dance,Single Ladies,Thriller,Bohemian Rhapsody,Sweet Caroline,We Will Rock You,Don't Stop Believin',Shake It Off,Hey Jude,Billie Jean,Dancing Queen,Livin' on a Prayer,I Will Survive,Rudolph the Red-Nosed Reindeer,Frosty the Snowman,Deck the Halls,You Are My Sunshine,Hokey Pokey,London Bridge,Itsy Bitsy Spider,Head Shoulders Knees and Toes,Under the Sea,Hakuna Matata,We Are the Champions,Mamma Mia,All I Want for Christmas Is You,Uptown Funk,Happy,Gangnam Style,Cha Cha Slide"},
+ {id:"adulting",name:"Adulting",em:"🧾",group:"grown",blurb:"Grown-up life, act it out",cards:"Doing taxes,Parallel parking,Job interview,Stuck in traffic,Changing a diaper,Assembling furniture,Folding a fitted sheet,Paying bills,Grocery shopping,Mowing the lawn,Washing the car,Cooking dinner,Doing laundry,Washing dishes,Taking out the trash,Changing a tire,Video call on mute,Waiting on hold,Forgot your password,Lost your keys,Morning coffee,Alarm clock snooze,Running late,First date,Wedding toast,Moving day,Packing a suitcase,Airport security,Jet lag,Dentist appointment,Gym membership,Stepping on a toy,Phone battery at 1%,Spilling coffee,Locked out of the house,Burnt toast,Online shopping,Haircut gone wrong,Out of toilet paper,Kids asking why,Dad joke,Monday morning,Asking for directions,Selfie,Group chat,Cleaning the gutters,Hanging Christmas lights"},
+ {id:"famous",name:"Famous Folks",em:"🌟",group:"grown",blurb:"People everyone has heard of",cards:"Albert Einstein,Abraham Lincoln,George Washington,Martin Luther King Jr.,Elvis Presley,Michael Jackson,Taylor Swift,Beyonce,Elton John,Dolly Parton,Oprah,Serena Williams,Michael Jordan,LeBron James,Tom Brady,Babe Ruth,Muhammad Ali,Usain Bolt,Simone Biles,Neil Armstrong,Amelia Earhart,Thomas Edison,Benjamin Franklin,Leonardo da Vinci,Shakespeare,Mozart,Beethoven,Cleopatra,Napoleon,Queen Elizabeth,Marilyn Monroe,Charlie Chaplin,Walt Disney,Steve Jobs,Bill Gates,Elon Musk,Dwayne The Rock Johnson,Tom Hanks,Bob Ross,Mr. Rogers,Julia Child,Gordon Ramsay,Willy Wonka,Sherlock Holmes,Dracula,Frankenstein,Robin Hood,Tarzan"},
+ {id:"brainy",name:"Tough Ones",em:"🧠",group:"grown",blurb:"Ideas and feelings, harder to act",cards:"Deja vu,Procrastination,Jealousy,Gravity,Brain freeze,Peer pressure,Nostalgia,Awkward silence,Hiccups,Sarcasm,Daydreaming,Sleepwalking,Stage fright,Road rage,Fear of heights,Butterflies in your stomach,Inside joke,Midlife crisis,Beginner's luck,Second wind,Sweet tooth,Cold feet,Couch potato,Night owl,Early bird,Spill the beans,Break the ice,Piece of cake,Raining cats and dogs,Under the weather,Hold your horses,Elephant in the room,Cat got your tongue,Once in a blue moon,Time flies,Ghosting,Photobomb,Binge-watching,FOMO,Humblebrag,Mansplaining,Hangry,Bucket list,Karma"},
+ {id:"mix",name:"Grab Bag",em:"🎲",group:"mix",blurb:"A little of every kid and family deck"}
+];
+DECKS.forEach(d=>{if(d.cards)d.cards=d.cards.split(",").map(c=>{const [t,e]=c.split("|");return {t:t.trim(),e:e||""}})});
+DECKS.find(d=>d.id==="mix").cards=DECKS.filter(d=>d.group==="kids"||d.group==="all").flatMap(d=>d.cards).filter((c,i,a)=>a.findIndex(x=>x.t===c.t)===i);
+const GROUPS=[["kids","For little actors","Every card has a picture, so non-readers can act too."],["all","For everyone",""],["grown","For grown-ups",""],["mix","Shuffle it up",""]];
+const TIMES=[30,60,90,120];
+
+/* ---------- State ---------- */
+const MAX_PLAYERS=12;
+let A={screen:"setup",players:[],time:60,tilt:true,turn:0,scores:{},deckId:null,cards:[],quitArmed:false};
+try{
+  const s=JSON.parse(localStorage.getItem("act-setup")||"null");
+  if(s&&Array.isArray(s.players)&&s.players.length){A.players=s.players.slice(0,MAX_PLAYERS);if(TIMES.includes(s.time))A.time=s.time;if(typeof s.tilt==="boolean")A.tilt=s.tilt}
+  else{const b=JSON.parse(localStorage.getItem("bee-setup")||"null");if(b&&b.players)A.players=b.players.map(p=>p.name).filter(Boolean).slice(0,MAX_PLAYERS)}
+}catch(e){}
+if(!A.players.length)A.players=["Player 1","Player 2","Player 3","Player 4"];
+try{const g=JSON.parse(localStorage.getItem("act-game")||"null");if(g&&g.scores){A.scores=g.scores;A.turn=g.turn||0;A.screen="pick"}}catch(e){}
+let used={};try{used=JSON.parse(localStorage.getItem("act-used")||"{}")}catch(e){}
+const saveSetup=()=>{try{localStorage.setItem("act-setup",JSON.stringify({players:A.players,time:A.time,tilt:A.tilt}))}catch(e){}};
+const saveGame=()=>{try{if(A.screen==="setup")localStorage.removeItem("act-game");else localStorage.setItem("act-game",JSON.stringify({scores:A.scores,turn:A.turn}))}catch(e){}};
+const saveUsed=()=>{try{localStorage.setItem("act-used",JSON.stringify(used))}catch(e){}};
+const names=()=>A.players.map(n=>n.trim()).filter(Boolean);
+const guesser=()=>{const n=names();return n[A.turn%n.length]};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $=id=>document.getElementById(id);
+const app=$("app"),stage=$("stage");
+
+/* ---------- Screens ---------- */
+const MASKS=`<svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 10c8 3 18 3 26 0v16c0 10-6 17-13 17S6 36 6 26z" fill="#6C3FE8"/><circle cx="13" cy="22" r="3" fill="#fff"/><circle cx="25" cy="22" r="3" fill="#fff"/><path d="M12 31c4 4 10 4 14 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M30 22c8 3 18 3 28 0v16c0 10-6 17-14 17s-14-7-14-17z" fill="#FF6B5A"/><circle cx="38" cy="34" r="3" fill="#fff"/><circle cx="50" cy="34" r="3" fill="#fff"/><path d="M37 46c4-4 10-4 14 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`;
+const chips=()=>`<div class="chips">${names().map((n,i)=>`<span class="chip ${i===A.turn%names().length?"now":""}">${esc(n)}<b>${A.scores[n]||0}</b></span>`).join("")}</div>`;
+
+function render(){({setup:renderSetup,pick:renderPick,ready:renderReady,recap:renderRecap,end:renderEnd})[A.screen]();scrollTo(0,0)}
+
+function renderSetup(){
+  const n=names().length;
+  app.innerHTML=`
+  <a class="home" href="./">‹ All games</a>
+  <header class="brand">${MASKS}<div><h1>Charade Parade</h1><p>Hold it to your forehead. Everyone else acts it out.</p></div></header>
+  <section class="card">
+    <div class="row between"><div class="label">Who's playing?</div><span class="muted">${n} player${n===1?"":"s"}</span></div>
+    <div class="players">${A.players.map((p,i)=>`<div class="player"><input value="${esc(p)}" data-i="${i}" aria-label="Player ${i+1} name" maxlength="16"><button class="remove" data-rm="${i}" aria-label="Remove ${esc(p)}" ${A.players.length<=2?"disabled":""}>×</button></div>`).join("")}</div>
+    ${A.players.length<MAX_PLAYERS?`<button class="btn ghost small" id="add">+ Add a player</button>`:""}
+    <div class="label">Seconds per turn</div>
+    <div class="seg">${TIMES.map(t=>`<button data-t="${t}" aria-pressed="${A.time===t}">${t}</button>`).join("")}</div>
+    <div class="label">Answer by</div>
+    <div class="seg"><button data-tilt="1" aria-pressed="${A.tilt}">Tilt or tap</button><button data-tilt="0" aria-pressed="${!A.tilt}">Tap only</button></div>
+    <button class="btn big" id="go" ${n<2?"disabled":""}>Let's play</button>
+  </section>
+  <section class="card">
+    <div class="label">How to play</div>
+    <ul class="rules">
+      <li>On your turn, pick a deck and hold the tablet on your forehead, screen facing out. Don't peek!</li>
+      <li>Everyone else acts out, describes, or hums the word on the screen. No saying the word!</li>
+      <li>Guessed it? Tilt the screen down to the floor. Want to pass? Tilt it up to the ceiling.</li>
+      <li>Or just tap: right side for got it, left side for pass.</li>
+      <li>Each word you guess is a point. Pass the tablet to the next player when time's up.</li>
+    </ul>
+  </section>`;
+  app.querySelectorAll("input[data-i]").forEach(el=>el.oninput=()=>{A.players[+el.dataset.i]=el.value;saveSetup();const n=names().length;$("go").disabled=n<2});
+  app.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{A.players.splice(+b.dataset.rm,1);saveSetup();render()});
+  const add=$("add");if(add)add.onclick=()=>{A.players.push("Player "+(A.players.length+1));saveSetup();render();const ins=app.querySelectorAll("input[data-i]");ins[ins.length-1].select()};
+  app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{A.time=+b.dataset.t;saveSetup();render()});
+  app.querySelectorAll("[data-tilt]").forEach(b=>b.onclick=()=>{A.tilt=b.dataset.tilt==="1";saveSetup();render()});
+  $("go").onclick=()=>{A.players=names();saveSetup();A.scores={};A.turn=0;A.screen="pick";saveGame();render()};
+}
+
+function renderPick(){
+  const g=guesser(),round=Math.floor(A.turn/names().length)+1;
+  app.innerHTML=`
+  ${chips()}
+  <section class="card turn">
+    <div class="row between"><span class="label">Round ${round}</span><button class="btn ghost small" id="end">Final scores</button></div>
+    <h2>${esc(g)}, you're guessing!</h2>
+    <p class="muted">Pick a deck. Everyone else gets ready to act.</p>
+    ${GROUPS.map(([gid,title,note])=>`
+      <div class="group-title">${title}</div>${note?`<p class="muted">${note}</p>`:""}
+      <div class="decks">${DECKS.filter(d=>d.group===gid).map(d=>`<button class="deck" data-d="${d.id}"><span class="em">${d.em}</span><b>${d.name}</b><small>${d.blurb}</small></button>`).join("")}</div>`).join("")}
+  </section>`;
+  app.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{A.deckId=b.dataset.d;A.screen="ready";render()});
+  $("end").onclick=()=>{A.screen="end";render();setTimeout(confetti,150)};
+}
+
+function renderReady(){
+  const d=DECKS.find(x=>x.id===A.deckId);
+  app.innerHTML=`
+  ${chips()}
+  <section class="card turn">
+    <span class="label">${d.em} ${d.name}</span>
+    <h2>${esc(guesser())}, hold the tablet on your forehead</h2>
+    <div class="hold"><svg width="90" height="90" viewBox="0 0 90 90" aria-hidden="true"><circle cx="45" cy="52" r="26" fill="#FFD7B5"/><rect x="18" y="10" width="54" height="30" rx="6" fill="#6C3FE8"/><rect x="23" y="15" width="44" height="20" rx="3" fill="#fff"/><circle cx="36" cy="56" r="3" fill="#1E1B3A"/><circle cx="54" cy="56" r="3" fill="#1E1B3A"/><path d="M38 66c4 3 10 3 14 0" stroke="#1E1B3A" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+    <p class="muted">Turn it sideways with the screen facing your family. ${A.tilt?"Tilt down when you get it, tilt up to pass. ":""}You can always tap: right side got it, left side pass.</p></div>
+    <button class="btn big" id="start">Start ${A.time} seconds</button>
+    <button class="btn ghost small" id="back">Pick a different deck</button>
+  </section>`;
+  $("start").onclick=startTurn;
+  $("back").onclick=()=>{A.screen="pick";render()};
+}
+
+function renderRecap(){
+  const g=guesser(),got=A.cards.filter(c=>c.ok).length,nextName=names()[(A.turn+1)%names().length];
+  app.innerHTML=`
+  <section class="card turn" style="align-items:center;text-align:center">
+    <span class="label">${esc(g)} got</span>
+    <div class="score-big">${got}</div>
+    <p class="muted">${got===0?"Tough deck! Next time.":got<4?"Nice work!":got<8?"Great guessing!":"Superstar!"} Tap a word to fix it if it was marked wrong.</p>
+  </section>
+  ${A.cards.length?`<section class="card"><ul class="recap">${A.cards.map((c,i)=>`<li class="${c.ok?"ok":"no"}"><button data-c="${i}"><span class="mark">${c.ok?"✓":"–"}</span>${c.e?c.e+" ":""}${esc(c.t)}</button></li>`).join("")}</ul></section>`:""}
+  <div class="row"><button class="btn big" id="next">Next up: ${esc(nextName)}</button></div>
+  <div class="row"><button class="btn ghost small" id="end">Final scores</button></div>`;
+  app.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{const c=A.cards[+b.dataset.c];c.ok=!c.ok;A.scores[g]=(A.scores[g]||0)+(c.ok?1:-1);saveGame();renderRecap()});
+  $("next").onclick=()=>{A.turn++;A.screen="pick";saveGame();render()};
+  $("end").onclick=()=>{A.turn++;A.screen="end";render();setTimeout(confetti,150)};
+}
+
+function renderEnd(){
+  const ranked=names().map(n=>({n,s:A.scores[n]||0})).sort((a,b)=>b.s-a.s);
+  const top=ranked[0]&&ranked[0].s;
+  app.innerHTML=`
+  <header class="brand">${MASKS}<div><h1>${top>0?ranked.filter(r=>r.s===top).map(r=>esc(r.n)).join(" & ")+" wins!":"Final scores"}</h1><p>What a show!</p></div></header>
+  <section class="card"><div class="podium">${ranked.map((r,i)=>`<div class="place ${r.s===top&&top>0?"first":""}"><span class="medal">${i+1}</span>${esc(r.n)}<span class="pts">${r.s}</span></div>`).join("")}</div>
+  <div class="row"><button class="btn" id="keep">Keep playing</button><button class="btn ghost" id="again">New game</button></div></section>
+  <a class="home" href="./">‹ All games</a>`;
+  $("keep").onclick=()=>{A.screen="pick";render()};
+  $("again").onclick=()=>{A.scores={};A.turn=0;A.screen="setup";saveGame();render()};
+}
+
+/* ---------- Sound & buzz ---------- */
+let ac=null;
+function tone(freqs,dur=.12,type="sine",vol=.25){
+  if(!ac)return;const t0=ac.currentTime;
+  freqs.forEach((f,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;
+    const s=t0+i*dur;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(vol,s+.01);g.gain.exponentialRampToValueAtTime(.001,s+dur*1.6);
+    o.connect(g).connect(ac.destination);o.start(s);o.stop(s+dur*1.8)});
+}
+const buzz=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+const sfx={good:()=>{tone([660,880,1100],.09);buzz(60)},pass:()=>{tone([300,220],.12,"triangle");buzz([30,40,30])},tick:()=>tone([1200],.05,"square",.08),go:()=>tone([520,780],.12),over:()=>{tone([440,330,220],.22,"sawtooth",.18);buzz(400)}};
+
+/* ---------- Tilt ----------
+   Uses gravity on the axis that points out of the screen. Held upright on a forehead it reads about 0.
+   Screen tipped toward the floor goes strongly negative (got it); toward the ceiling, positive (pass).
+   Works the same in either landscape direction. The sign is checked when Start is tapped, while the
+   screen faces the player, in case a browser reports gravity flipped. */
+const T={z:0,seen:false,sign:1,armed:false,over:0,dir:0};
+addEventListener("devicemotion",e=>{
+  const g=e.accelerationIncludingGravity;if(!g||g.z==null)return;
+  T.seen=true;T.z=T.z*.6+g.z*.4;
+  if(!P||!P.live||!A.tilt||P.lockUntil>performance.now())return;
+  const z=T.z*T.sign;
+  if(Math.abs(z)<4){T.armed=true;T.dir=0;return}
+  if(!T.armed)return;
+  const dir=z<-7?1:z>7?-1:0;
+  if(!dir){T.dir=0;return}
+  if(dir!==T.dir){T.dir=dir;T.over=performance.now();return}
+  if(performance.now()-T.over>120){T.armed=false;T.dir=0;answer(dir===1)}
+});
+
+/* ---------- Play ---------- */
+let P=null,wake=null;
+function drawDeck(id){
+  const d=DECKS.find(x=>x.id===id),all=d.cards.map((_,i)=>i);
+  let u=(used[id]||[]).filter(i=>i<all.length);
+  if(all.length-u.length<12)u=[];
+  const fresh=all.filter(i=>!u.includes(i));
+  for(let i=fresh.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fresh[i],fresh[j]]=[fresh[j],fresh[i]]}
+  used[id]=u;return {d,order:fresh};
+}
+async function startTurn(){
+  try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}
+  if(A.tilt&&window.DeviceMotionEvent&&typeof DeviceMotionEvent.requestPermission==="function"){try{await DeviceMotionEvent.requestPermission()}catch(e){}}
+  T.sign=T.seen&&T.z<-3?-1:1;T.armed=false;
+  try{if(document.documentElement.requestFullscreen&&!document.fullscreenElement)await document.documentElement.requestFullscreen({navigationUI:"hide"})}catch(e){}
+  try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock("landscape").catch(()=>{})}catch(e){}
+  try{wake=navigator.wakeLock?await navigator.wakeLock.request("screen"):null}catch(e){wake=null}
+  const {d,order}=drawDeck(A.deckId);
+  P={d,order,idx:-1,live:false,lockUntil:0,end:0,left:A.time,timer:null,lastTick:null};
+  A.cards=[];
+  stage.hidden=false;stage.className="";
+  let n=3;
+  const count=()=>{
+    if(n===0){go();return}
+    stage.innerHTML=`<div class="st-main"><div class="st-hint">Forehead time, ${esc(guesser())}!</div><div class="big-count">${n}</div><div class="st-hint">${d.em} ${esc(d.name)}</div></div>`;
+    tone([440],.08);n--;P.timer=setTimeout(count,1000);
+  };
+  count();
+}
+function go(){
+  sfx.go();
+  stage.innerHTML=`
+    <div class="st-top"><span class="timer" id="tm">${A.time}</span><button class="stop" id="stop">Stop</button><span id="got">0 ✓</span></div>
+    <div class="zones"><button id="zpass" aria-label="Pass">‹ Pass</button><button id="zgood" aria-label="Got it">Got it ›</button></div>
+    <div class="st-main" id="card" style="pointer-events:none"></div>`;
+  $("zpass").onpointerdown=e=>{e.preventDefault();answer(false)};
+  $("zgood").onpointerdown=e=>{e.preventDefault();answer(true)};
+  $("stop").onclick=()=>{if(!A.quitArmed){A.quitArmed=true;$("stop").textContent="Tap again to stop";setTimeout(()=>{A.quitArmed=false;const s=$("stop");if(s)s.textContent="Stop"},2500)}else{A.quitArmed=false;finish(false)}};
+  P.live=true;P.end=performance.now()+A.time*1000;
+  nextCard();
+  P.timer=setInterval(clock,100);
+}
+function clock(){
+  const left=Math.max(0,Math.ceil((P.end-performance.now())/1000));
+  if(left!==P.left){P.left=left;const tm=$("tm");if(tm){tm.textContent=left;tm.classList.toggle("low",left<=5)}if(left<=5&&left>0)sfx.tick()}
+  if(left<=0)finish(true);
+}
+function nextCard(){
+  P.idx++;
+  if(P.idx>=P.order.length){const r=drawDeck(P.d.id);P.order=P.order.concat(r.order);}
+  const c=P.d.cards[P.order[P.idx]];
+  const card=$("card");
+  card.innerHTML=`${c.e?`<div class="st-emoji">${c.e}</div>`:""}<div class="st-word" id="word">${esc(c.t)}</div>`;
+  fit($("word"),!!c.e);
+}
+function fit(el,hasEmoji){
+  const W=innerWidth-48,H=innerHeight*(hasEmoji?.32:.55);
+  let s=Math.min(innerWidth*.16,innerHeight*(hasEmoji?.2:.3));
+  el.style.fontSize=s+"px";
+  while(s>24&&(el.scrollWidth>W||el.offsetHeight>H)){s*=.92;el.style.fontSize=s+"px"}
+}
+function answer(ok){
+  if(!P||!P.live||P.lockUntil>performance.now())return;
+  const c=P.d.cards[P.order[P.idx]];
+  A.cards.push({t:c.t,e:c.e,ok});
+  (used[P.d.id]=used[P.d.id]||[]).push(P.order[P.idx]);
+  const got=A.cards.filter(x=>x.ok).length;$("got").textContent=got+" ✓";
+  ok?sfx.good():sfx.pass();
+  P.lockUntil=performance.now()+650;
+  stage.className=ok?"good":"pass";
+  $("card").innerHTML=`<div class="st-word" style="font-size:min(16vw,22vh)">${ok?"Got it!":"Pass"}</div>`;
+  setTimeout(()=>{if(!P||!P.live)return;stage.className="";nextCard()},650);
+}
+function finish(timeUp){
+  if(!P)return;
+  clearInterval(P.timer);clearTimeout(P.timer);
+  const wasLive=P.live;P.live=false;
+  // A word left on screen when time runs out counts as a pass so the recap shows it
+  if(wasLive&&P.idx>=0&&A.cards.length<P.idx+1){const c=P.d.cards[P.order[P.idx]];A.cards.push({t:c.t,e:c.e,ok:false})}
+  const g=guesser();A.scores[g]=(A.scores[g]||0)+A.cards.filter(c=>c.ok).length;
+  saveUsed();
+  const done=()=>{stage.hidden=true;stage.innerHTML="";P=null;
+    try{wake&&wake.release()}catch(e){}wake=null;
+    try{screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock()}catch(e){}
+    try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}
+    A.screen="recap";saveGame();render();if(A.cards.filter(c=>c.ok).length>=5)setTimeout(confetti,150)};
+  if(timeUp&&wasLive){sfx.over();stage.className="over";stage.innerHTML=`<div class="st-main"><div class="st-word" style="font-size:min(16vw,24vh)">Time's up!</div><div class="st-hint">Look at the screen, ${esc(g)}</div></div>`;setTimeout(done,1800)}
+  else done();
+}
+document.addEventListener("visibilitychange",async()=>{if(!document.hidden&&P&&P.live&&navigator.wakeLock){try{wake=await navigator.wakeLock.request("screen")}catch(e){}}});
+
+/* ---------- Confetti ---------- */
+const cv=$("confetti"),cx=cv.getContext("2d");let bits=[],raf=null;
+function confetti(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  cv.width=innerWidth;cv.height=innerHeight;const cols=["#6C3FE8","#FF6B5A","#FFC83D","#17A45F","#7fb2ff"];
+  for(let i=0;i<90;i++)bits.push({x:innerWidth/2+(Math.random()-.5)*120,y:innerHeight*.35,vx:(Math.random()-.5)*12,vy:-Math.random()*12-4,r:Math.random()*6+4,c:cols[i%cols.length],a:Math.random()*6,life:0});
+  if(!raf)tick();
+}
+function tick(){
+  cx.clearRect(0,0,cv.width,cv.height);
+  bits.forEach(b=>{b.vy+=.35;b.x+=b.vx;b.y+=b.vy;b.a+=.2;b.life++;cx.save();cx.translate(b.x,b.y);cx.rotate(b.a);cx.fillStyle=b.c;cx.fillRect(-b.r/2,-b.r/2,b.r,b.r*1.6);cx.restore()});
+  bits=bits.filter(b=>b.y<cv.height+20&&b.life<200);
+  raf=bits.length?requestAnimationFrame(tick):(cx.clearRect(0,0,cv.width,cv.height),null);
+}
+render();
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+</script>
+</body>
+</html>
