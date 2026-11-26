@@ -139,6 +139,11 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--honey);outline-
 .big-no{background:var(--oops);box-shadow:0 4px 0 #9c2f2c}
 .big-yes:active,.big-no:active{transform:translateY(3px);box-shadow:none}
 #skip{align-self:center}
+.stepper{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stepper button{width:52px;height:52px;border-radius:14px;background:var(--bg);box-shadow:inset 0 0 0 2px var(--key-edge);font-family:var(--display);font-size:28px;font-weight:600}
+.stepper button:disabled{opacity:.4}
+.stepper-val{font-family:var(--display);font-size:32px;font-weight:700;min-width:1.5ch;text-align:center;font-variant-numeric:tabular-nums}
+.stepper .muted{text-align:left}
 /* tournament */
 .row.between{justify-content:space-between}.row.center{justify-content:center}
 .center{text-align:center}.muted.left{text-align:left}
@@ -217,10 +222,10 @@ const DEFAULT_PLAYERS=[
   {name:"Grown-up 3",level:"level4"},{name:"Grown-up 4",level:"level4"}
 ];
 const MIN_PLAYERS=2, MAX_PLAYERS=12, LIVES=2;
-let S={screen:"setup",players:DEFAULT_PLAYERS.map(p=>({...p})),lives:LIVES,C:null,quitArmed:false};
-try{const saved=JSON.parse(localStorage.getItem("bee-setup")||"null");if(saved&&saved.players&&saved.players.length){if([1,2,3].includes(saved.lives))S.lives=saved.lives;S.players=saved.players.slice(0,MAX_PLAYERS).map(p=>({name:p.name,level:LEVELS[p.level]?p.level:"level3"}))}}catch(e){}
+let S={screen:"setup",players:DEFAULT_PLAYERS.map(p=>({...p})),lives:LIVES,skips:0,C:null,quitArmed:false};
+try{const saved=JSON.parse(localStorage.getItem("bee-setup")||"null");if(saved&&saved.players&&saved.players.length){if([1,2,3].includes(saved.lives))S.lives=saved.lives;if(saved.skips>=0&&saved.skips<=5)S.skips=saved.skips;S.players=saved.players.slice(0,MAX_PLAYERS).map(p=>({name:p.name,level:LEVELS[p.level]?p.level:"level3"}))}}catch(e){}
 try{const t=JSON.parse(localStorage.getItem("bee-circle")||"null");if(t&&t.C){S.C=t.C;S.screen=t.C.champion!=null?"end":t.C.phase}}catch(e){}
-function saveSetup(){try{localStorage.setItem("bee-setup",JSON.stringify({players:S.players,lives:S.lives}))}catch(e){}}
+function saveSetup(){try{localStorage.setItem("bee-setup",JSON.stringify({players:S.players,lives:S.lives,skips:S.skips}))}catch(e){}}
 function saveGame(){try{if(S.C)localStorage.setItem("bee-circle",JSON.stringify({C:S.C}));else localStorage.removeItem("bee-circle")}catch(e){}}
 
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -239,7 +244,7 @@ function startGame(){
   const list=S.players.filter(p=>p.name.trim());
   if(list.length<MIN_PLAYERS) return;
   const used={};for(const k in WORDS) used[k]=[];
-  S.C={players:list.map((p,i)=>({id:i,name:p.name.trim(),level:p.level,lives:S.lives,right:0,outOrder:null})),
+  S.C={players:list.map((p,i)=>({id:i,name:p.name.trim(),level:p.level,lives:S.lives,skips:S.skips,right:0,outOrder:null})),
        start:list.length,maxLives:S.lives,round:0,queue:[],pos:0,results:{},used,outCount:0,champion:null,phase:"turn",cur:null,shown:false,summary:null};
   startRound();
 }
@@ -287,7 +292,7 @@ function markWord(ok){
   C.pos++;
   if(C.pos>=C.queue.length) endRound(); else newTurn();
 }
-function skipWord(){const C=S.C;C.cur=drawWord(speller().level);saveGame();render()}
+function skipWord(){const C=S.C,sp=speller();if(!(sp.skips>0))return;sp.skips--;C.cur=drawWord(speller().level);saveGame();render()}
 function endRound(){
   const C=S.C, ids=C.queue, missed=ids.filter(id=>!C.results[id]);
   const sum={round:C.round,allMissed:missed.length===ids.length,lostHeart:[],out:[],right:ids.filter(id=>C.results[id])};
@@ -340,6 +345,13 @@ function renderSetup(){
     <div class="seg" role="group" aria-label="Hearts each">
       ${[1,2,3].map(k=>`<button data-lives="${k}" aria-pressed="${S.lives===k}">${heart(true).repeat(k)} ${k===1?"Sudden death":k===2?"Classic":"Easy going"}</button>`).join("")}
     </div>
+    <div class="label">Skips each</div>
+    <div class="stepper">
+      <button id="skip-minus" aria-label="Fewer skips" ${S.skips<=0?"disabled":""}>−</button>
+      <span class="stepper-val">${S.skips}</span>
+      <button id="skip-plus" aria-label="More skips" ${S.skips>=5?"disabled":""}>+</button>
+      <span class="muted">${S.skips===0?"No skips. Every word counts.":`Each player can pass on ${S.skips} word${S.skips===1?"":"s"} per game.`}</span>
+    </div>
     <button class="btn" id="start" ${n<MIN_PLAYERS?"disabled":""}>Start the bee</button>
   </section>
   <section class="card">
@@ -359,6 +371,8 @@ function renderSetup(){
   const add=document.getElementById("add");
   if(add) add.onclick=()=>{S.players.push({name:`Player ${S.players.length+1}`,level:"level3"});saveSetup();renderSetup();const last=document.getElementById(`pname-${S.players.length-1}`);last&&(last.focus(),last.select())};
   app.querySelectorAll("[data-lives]").forEach(b=>b.onclick=()=>{S.lives=+b.dataset.lives;saveSetup();renderSetup()});
+  document.getElementById("skip-minus").onclick=()=>{S.skips=Math.max(0,S.skips-1);saveSetup();renderSetup()};
+  document.getElementById("skip-plus").onclick=()=>{S.skips=Math.min(5,S.skips+1);saveSetup();renderSetup()};
   document.getElementById("start").onclick=startGame;
 }
 
@@ -407,7 +421,7 @@ function renderTurn(){
       <button class="big-yes" id="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Spelled it right</button>
       <button class="big-no" id="no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>Missed it</button>
     </div>
-    <button class="btn ghost small" id="skip">Skip this word</button>`;
+    ${sp.skips>0?`<button class="btn ghost small" id="skip">Skip this word (${sp.skips} skip${sp.skips===1?"":"s"} left)</button>`:""}`;
   }
   app.innerHTML=`<div class="label center">Round ${C.round} · speller ${C.pos+1} of ${C.queue.length}</div>${circleStrip()}<section class="card">${head}${inner}</section>${quitButton()}`;
   const on=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn};
