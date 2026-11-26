@@ -320,8 +320,6 @@ async function startTurn(){
   try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}
   if(A.tilt&&window.DeviceMotionEvent&&typeof DeviceMotionEvent.requestPermission==="function"){try{await DeviceMotionEvent.requestPermission()}catch(e){}}
   T.sign=T.seen&&T.z<-3?-1:1;T.armed=false;
-  try{if(document.documentElement.requestFullscreen&&!document.fullscreenElement)await document.documentElement.requestFullscreen({navigationUI:"hide"})}catch(e){}
-  try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock("landscape").catch(()=>{})}catch(e){}
   try{wake=navigator.wakeLock?await navigator.wakeLock.request("screen"):null}catch(e){wake=null}
   const {d,order}=drawDeck(A.deckId);
   P={d,order,idx:-1,live:false,lockUntil:0,end:0,left:A.time,timer:null,lastTick:null};
@@ -389,8 +387,6 @@ function finish(timeUp){
   saveUsed();
   const done=()=>{stage.hidden=true;stage.innerHTML="";P=null;
     try{wake&&wake.release()}catch(e){}wake=null;
-    try{screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock()}catch(e){}
-    try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}
     A.screen="recap";saveGame();render();if(A.cards.filter(c=>c.ok).length>=5)setTimeout(confetti,150)};
   if(timeUp&&wasLive){sfx.over();stage.className="over";stage.innerHTML=`<div class="st-main"><div class="st-word" style="font-size:min(16vw,24vh)">Time's up!</div><div class="st-hint">Look at the screen, ${esc(g)}</div></div>`;setTimeout(done,1800)}
   else done();
