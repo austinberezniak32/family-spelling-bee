@@ -4,8 +4,8 @@ Usage: python3 tools/update_words.py path/to/spelling-words.json"""
 import json, re, sys, pathlib
 root = pathlib.Path(__file__).resolve().parent.parent
 d = json.load(open(sys.argv[1]))
-words = {l["id"]: [[w["word"], w["sentence"], w["definition"]] for w in l["words"]] for l in d["levels"]}
-ages = {"level1": "age 5", "level2": "age 8", "level3": "grown-ups", "level4": "grown-up champs"}
+words = {l["id"]: [[w["word"], w["sentence"], w["definition"], w.get("difficulty", 3)] for w in l["words"]] for l in d["levels"]}
+ages = {"level1": "age 5", "level2": "age 8", "level3": "grown-ups, start easy", "level4": "grown-ups, start hard"}
 levels = {l["id"]: {"name": l["name"], "age": ages.get(l["id"], l.get("ages", "")), "free": 1 if l["id"] == "level1" else 0} for l in d["levels"]}
 p = root / "index.html"; s = p.read_text()
 s, n1 = re.subn(r"const WORDS = .*?;\n", lambda m: "const WORDS = " + json.dumps(words, separators=(",", ":")) + ";\n", s, count=1)
