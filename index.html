@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4B324">
+<meta name="description" content="A family spelling bee: go around the circle, two misses and you're out.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Buzzword Family Bee</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+@font-face{font-family:"Fredoka";src:url(fonts/fredoka.woff2) format("woff2");font-weight:300 700;font-display:swap}
+@font-face{font-family:"Nunito";src:url(fonts/nunito.woff2) format("woff2");font-weight:200 1000;font-display:swap}
+</style>
+<style>
+/* Layout: one-column game card on a honeycomb ground; three screens (setup, turn, results) swap in place. */
+:root{
+  --bg:#EAF1F8; --comb:#dbe6f2; --surface:#ffffff; --ink:#1B2740; --muted:#5a6884;
+  --honey:#F4B324; --honey-deep:#C98A06; --honey-soft:#FFF1CC;
+  --good:#1E9E62; --good-soft:#DDF5E8; --oops:#D9534F; --oops-soft:#FCE4E3;
+  --key:#ffffff; --key-edge:#c9d5e4; --shadow:0 2px 0 rgba(27,39,64,.08),0 8px 24px rgba(27,39,64,.08);
+  --display:"Fredoka","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1624; --comb:#162033; --surface:#1a2438; --ink:#eef2f9; --muted:#9fb0cc;
+  --honey:#F6BD3A; --honey-deep:#F6BD3A; --honey-soft:#3a2f12;
+  --good:#46c98a; --good-soft:#123826; --oops:#ff7b77; --oops-soft:#3d1a1c;
+  --key:#24304a; --key-edge:#0b111d; --shadow:0 2px 0 rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1624; --comb:#162033; --surface:#1a2438; --ink:#eef2f9; --muted:#9fb0cc;
+  --honey:#F6BD3A; --honey-deep:#F6BD3A; --honey-soft:#3a2f12;
+  --good:#46c98a; --good-soft:#123826; --oops:#ff7b77; --oops-soft:#3d1a1c;
+  --key:#24304a; --key-edge:#0b111d; --shadow:0 2px 0 rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 32px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66zm0 32L0 82' fill='none' stroke='%2388a0c0' stroke-opacity='.16' stroke-width='2'/%3E%3C/svg%3E");}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.1}
+button{font:inherit;color:inherit;cursor:pointer;border:0;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:3px solid var(--honey);outline-offset:2px}
+.card{background:var(--surface);border-radius:22px;box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:16px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{flex:none}
+.brand h1{font-size:clamp(28px,7vw,38px);font-weight:700}
+.brand p{margin:0;color:var(--muted);font-weight:700}
+.label{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.btn{background:var(--honey);color:#1B2740;font-family:var(--display);font-weight:600;font-size:20px;padding:14px 22px;border-radius:16px;box-shadow:0 4px 0 var(--honey-deep);transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--honey-deep)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--key-edge)}
+.btn.small{font-size:16px;padding:10px 14px;border-radius:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* setup */
+.player{display:grid;grid-template-columns:1fr auto;gap:8px 10px;padding:14px;border-radius:16px;background:var(--bg)}
+.player input{font:inherit;font-weight:800;font-size:18px;color:var(--ink);background:var(--surface);border:2px solid var(--key-edge);border-radius:12px;padding:10px 12px;min-width:0;width:100%}
+.remove{background:transparent;color:var(--muted);font-size:26px;width:44px;border-radius:12px}
+.levels{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.lvl{background:var(--surface);border-radius:12px;padding:8px 4px;text-align:center;box-shadow:inset 0 0 0 2px var(--key-edge);line-height:1.15}
+.lvl b{display:block;font-family:var(--display);font-weight:600;font-size:16px}
+.lvl small{color:var(--muted);font-size:12px;font-weight:700}
+.lvl[aria-pressed="true"]{background:var(--honey-soft);box-shadow:inset 0 0 0 3px var(--honey)}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;background:var(--bg);border-radius:12px;padding:10px;font-weight:800;box-shadow:inset 0 0 0 2px var(--key-edge)}
+.seg button[aria-pressed="true"]{background:var(--honey-soft);box-shadow:inset 0 0 0 3px var(--honey)}
+.rules{margin:0;padding-left:20px;color:var(--muted);font-weight:600}
+.rules li+li{margin-top:4px}
+
+/* game */
+.scores{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.chip{flex:none;display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:6px 14px 6px 8px;box-shadow:var(--shadow);font-weight:800}
+.chip .pts{font-family:var(--display);background:var(--bg);border-radius:999px;min-width:30px;text-align:center;padding:2px 8px;font-variant-numeric:tabular-nums}
+.chip.now{box-shadow:inset 0 0 0 3px var(--honey),var(--shadow)}
+.turn-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.turn-head h2{font-size:clamp(26px,7vw,34px)}
+.badge{font-size:13px;font-weight:800;background:var(--honey-soft);color:var(--ink);padding:4px 10px;border-radius:999px}
+.speak{display:flex;flex-direction:column;align-items:center;gap:12px}
+.hex{width:150px;height:150px;background:var(--honey);clip-path:polygon(25% 4%,75% 4%,100% 50%,75% 96%,25% 96%,0 50%);display:grid;place-items:center;color:#1B2740;font-family:var(--display);font-weight:700;font-size:18px;transition:transform .1s}
+.hex:active{transform:scale(.95)}
+.hex.talking{animation:pulse .7s ease-in-out infinite alternate}
+@keyframes pulse{to{transform:scale(1.06)}}
+.hex span{display:flex;flex-direction:column;align-items:center;gap:2px}
+.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:100%}
+.tool{background:var(--bg);border-radius:14px;padding:10px 4px;font-weight:800;font-size:14px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tool svg{width:22px;height:22px}
+.tool:disabled{opacity:.45}
+.slots{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;min-height:58px}
+.slot{width:42px;height:52px;border-radius:12px;background:var(--bg);border:2px dashed var(--key-edge);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:28px;text-transform:uppercase}
+.slot.filled{background:var(--honey-soft);border:2px solid var(--honey)}
+.slot.free{border-style:solid}
+.slot.hint{color:var(--honey-deep)}
+.typed-long .slot{width:32px;height:44px;font-size:22px;border-radius:9px}
+.kb{display:flex;flex-direction:column;gap:7px;user-select:none}
+.kb-row{display:flex;gap:5px;justify-content:center}
+.key{flex:1;max-width:48px;height:52px;background:var(--key);border-radius:10px;box-shadow:0 3px 0 var(--key-edge);font-family:var(--display);font-weight:600;font-size:22px}
+.key:active{transform:translateY(2px);box-shadow:0 1px 0 var(--key-edge)}
+.key.wide{max-width:none;flex:1.6;font-size:16px}
+.key.go{background:var(--good);color:#fff;box-shadow:0 3px 0 #136b42}
+.feedback{border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center}
+.feedback.yes{background:var(--good-soft)}
+.feedback.no{background:var(--oops-soft)}
+.feedback.try{background:var(--honey-soft)}
+.feedback h3{font-size:28px}
+.feedback .word{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.feedback .mine{color:var(--muted);font-weight:700}
+.peek{font-family:var(--display);font-size:30px;font-weight:700;background:var(--bg);border-radius:14px;padding:10px 18px}
+.muted{color:var(--muted);font-weight:700;margin:0;text-align:center}
+
+/* results */
+.podium{display:flex;flex-direction:column;gap:10px}
+.place{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--bg);font-weight:800}
+.place.first{background:var(--honey-soft);box-shadow:inset 0 0 0 3px var(--honey)}
+.place .medal{font-family:var(--display);font-size:22px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--surface)}
+.place .score{font-family:var(--display);font-size:24px;font-variant-numeric:tabular-nums}
+.place small{display:block;color:var(--muted);font-weight:700}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:5}
+/* host card */
+.cover{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:24px 8px}
+.cover svg{width:88px;height:88px}
+.cover h3{font-size:clamp(24px,5vw,32px);font-weight:600}
+.host{display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center}
+.the-word{font-family:var(--display);font-weight:700;font-size:clamp(44px,11vw,84px);line-height:1;word-break:break-word}
+.spell{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.spell span{min-width:40px;padding:6px 4px;border-radius:10px;background:var(--honey-soft);border:2px solid var(--honey);font-family:var(--display);font-weight:700;font-size:clamp(22px,4.5vw,32px);line-height:1.1}
+.tip{margin:0;font-weight:700;color:var(--muted)}
+.clue{width:100%;background:var(--bg);border-radius:16px;padding:14px 16px;text-align:left}
+.clue p{margin:4px 0 0;font-size:clamp(18px,3.4vw,22px);font-weight:700}
+.judge{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.big-yes,.big-no{border-radius:20px;padding:18px 10px;font-family:var(--display);font-weight:600;font-size:clamp(18px,3.6vw,24px);display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff}
+.big-yes svg,.big-no svg{width:44px;height:44px}
+.big-yes{background:var(--good);box-shadow:0 4px 0 #136b42}
+.big-no{background:var(--oops);box-shadow:0 4px 0 #9c2f2c}
+.big-yes:active,.big-no:active{transform:translateY(3px);box-shadow:none}
+#skip{align-self:center}
+/* tournament */
+.row.between{justify-content:space-between}.row.center{justify-content:center}
+.center{text-align:center}.muted.left{text-align:left}
+.count{font-weight:800;color:var(--muted)}
+.players{display:flex;flex-direction:column;gap:10px}
+.btn:disabled{opacity:.45;box-shadow:none}
+.heart{width:22px;height:22px;fill:var(--key-edge);vertical-align:-5px}
+.heart.on{fill:var(--oops)}
+.rules .heart{width:18px;height:18px}
+.lives{display:inline-flex;gap:2px;flex:none}
+.matches{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.match{background:var(--bg);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.match.up{box-shadow:inset 0 0 0 3px var(--honey);background:var(--honey-soft)}
+.match.done{opacity:.85}
+.side{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--good)}
+.side.second{color:var(--oops)}
+.vs{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-family:var(--display);font-weight:600;font-size:22px;line-height:1.2}
+.v{font-size:14px;color:var(--muted);font-family:var(--body);font-weight:800}
+.mname.won{color:var(--good)}.mname.lost{text-decoration:line-through;color:var(--muted)}
+.result{font-weight:800;color:var(--muted)}
+.standings{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.group h3{font-size:18px;margin-bottom:6px}
+.group ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.prow{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 12px}
+.prow.out{opacity:.55}
+.pname{font-weight:800;min-width:0;overflow-wrap:anywhere}.pname small,.place small{display:block;color:var(--muted);font-weight:700;font-size:13px}
+.history{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-weight:600}
+.history b{color:var(--ink)}
+.duel{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.duelist{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:8px 16px;box-shadow:var(--shadow);font-family:var(--display);font-weight:600;font-size:20px}
+.duelist.now{box-shadow:inset 0 0 0 3px var(--honey),var(--shadow)}
+.mark{min-width:1ch;color:var(--muted)}
+.banner{margin:0;font-weight:800;font-size:18px}
+.place{grid-template-columns:44px 1fr auto}
+.chip.gone{opacity:.5}
+.chip .mark{font-weight:800}.mark.ok{color:var(--good)}.mark.miss{color:var(--oops)}
+.summary{margin:0;font-size:18px;font-weight:600}
+@media (prefers-reduced-motion:reduce){.hex.talking{animation:none}}
+@media (min-width:700px){
+  body{font-size:18px}
+  .wrap{max-width:820px;gap:20px}
+  .card{padding:28px;gap:20px}
+  .levels{grid-template-columns:repeat(4,1fr)}
+  .lvl{padding:12px 6px}.lvl b{font-size:19px}.lvl small{font-size:14px}
+  .hex{width:200px;height:200px;font-size:22px}
+  .tool{font-size:16px;padding:14px 6px}.tool svg{width:28px;height:28px}
+  .slot{width:58px;height:70px;font-size:38px;border-radius:14px}
+  .typed-long .slot{width:46px;height:58px;font-size:30px}
+  .kb{gap:10px}.kb-row{gap:8px}
+  .key{max-width:68px;height:72px;font-size:30px;border-radius:14px}
+  .key.wide{font-size:20px}
+  .btn{font-size:24px;padding:16px 28px}
+  .chip{font-size:18px;padding:8px 18px 8px 10px}
+  .feedback h3{font-size:34px}.feedback .word{font-size:44px}
+}
+@media (max-width:380px){.key{height:46px;font-size:19px}.hex{width:130px;height:130px}}
+</style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+<main class="wrap" id="app"></main>
+
+<script>
+/* ---------- Word lists ---------- */
+// Word lists from spelling-words.json (embedded so the game works offline)
+const WORDS = {"level1":[["cat","The cat sat on the warm rug.","A small furry pet that says meow."],["dog","My dog loves to play fetch.","A pet animal that barks."],["sun","The sun is hot today.","The bright star that lights the day."],["hat","Put on your hat before we go.","Something you wear on your head."],["bed","I jump into bed at night.","The place where you sleep."],["pig","The pig rolled in the mud.","A farm animal with a curly tail."],["cup","Fill my cup with milk, please.","A small container you drink from."],["run","I can run to the tree.","To move fast on your feet."],["fish","The fish swam in the bowl.","An animal that swims in water."],["frog","The frog jumped into the pond.","A green animal that hops and croaks."],["ship","The ship sailed across the sea.","A big boat."],["duck","The duck said quack, quack.","A bird that swims and quacks."],["tree","We climbed the big tree.","A tall plant with a trunk and leaves."],["ball","Kick the ball to me!","A round toy you throw or kick."],["milk","I drink milk with my cookies.","A white drink that comes from cows."],["jump","Can you jump over the puddle?","To push off the ground with your legs."],["star","I made a wish on a star.","A tiny light in the night sky."],["cake","We ate cake on my birthday.","A sweet baked treat."],["book","Grandma read me a book.","Pages with words and pictures to read."],["moon","The moon is big and bright.","The round light in the night sky."],["rain","The rain made a puddle.","Water that falls from clouds."],["snow","We built a man out of snow.","Cold white flakes that fall in winter."],["bike","I rode my bike to the park.","A ride with two wheels and pedals."],["kite","My kite flew up high.","A toy that flies on a string in the wind."],["boat","We rowed the boat on the lake.","Something that floats and carries people on water."],["play","Let's play tag outside.","To have fun with toys or games."],["pan","Dad cooked eggs in the pan.","A flat pot for cooking."],["log","A frog sat on the log.","A big piece of a tree trunk."],["red","She has a red balloon.","The color of a fire truck."],["bird","A bird sang in the tree.","An animal with feathers and wings."],["bear","The bear ate some honey.","A big furry wild animal."],["bee","A bee landed on the flower.","A buzzing insect that makes honey."],["nest","Three eggs sat in the nest.","A home a bird builds for its eggs."],["hand","Raise your hand to talk.","The part of your arm with fingers."],["mud","My boots are covered in mud.","Wet, sticky dirt."],["lamp","Turn on the lamp so we can read.","A light you turn on in a room."],["sock","My sock has a hole in it.","A soft cover for your foot."],["bug","A bug crawled on the leaf.","A tiny crawling insect."],["home","We walked home together.","The place where you live."],["farm","Cows live on the farm.","A place where animals and crops are raised."],["tent","We slept in a tent.","A cloth shelter for camping."],["swim","I can swim in the pool.","To move through water."],["clap","Clap your hands to the song.","To hit your hands together."],["map","We used a map to find the park.","A picture that shows where places are."],["web","The spider made a web.","A net a spider spins."],["box","The toys are in the box.","A container with flat sides."],["bus","I ride the bus to school.","A big vehicle that carries lots of people."],["hen","The hen laid an egg.","A mother chicken."],["top","The cat sat on top of the car.","The highest part of something."],["fox","The fox ran into the woods.","A wild animal with red fur and a bushy tail."]],"level2":[["because","I wore a coat because it was cold.","For the reason that."],["friendly","The new neighbor is very friendly.","Kind and nice to others."],["animal","A giraffe is a tall animal.","A living thing that can move and eat."],["beautiful","The sunset was beautiful.","Very pretty."],["different","My sister and I like different colors.","Not the same."],["garden","We planted carrots in the garden.","A place where flowers or vegetables grow."],["kitchen","Dad is making pancakes in the kitchen.","The room where food is cooked."],["library","I got three books from the library.","A place full of books you can borrow."],["morning","I eat breakfast every morning.","The early part of the day."],["question","Can I ask you a question?","Something you ask to find out an answer."],["answer","She knew the answer right away.","A reply to a question."],["thought","I had a thought about our fort.","An idea in your mind."],["through","The train went through the tunnel.","In one side and out the other."],["weather","The weather is perfect for a picnic.","What the air outside is like: sunny, rainy, windy."],["whistle","The coach blew the whistle.","A high sound made by blowing."],["bridge","We walked across the bridge.","Something built to cross over water or a road."],["castle","The castle had four towers.","A big stone building where kings and queens lived."],["dinosaur","The dinosaur skeleton was huge.","A giant reptile that lived long ago."],["favorite","Pizza is my favorite food.","Liked the most."],["treasure","The pirates buried their treasure.","Gold, jewels, or other valuable things."],["adventure","Camping was a big adventure.","An exciting trip or experience."],["balloon","The balloon floated away.","A rubber bag filled with air."],["breakfast","We had eggs for breakfast.","The first meal of the day."],["cousin","My cousin is visiting this weekend.","The child of your aunt or uncle."],["enough","Do we have enough chairs?","As much as you need."],["excited","I am excited for the holiday.","Very happy and eager."],["finally","The bus finally arrived.","At last, after a long time."],["giraffe","The giraffe ate leaves from the treetop.","A tall African animal with a long neck."],["haunted","They told stories about the haunted house.","Visited by ghosts."],["island","We took a ferry to the island.","Land with water all around it."],["jungle","Monkeys swing through the jungle.","A thick forest in a hot, rainy place."],["knock","Knock before you come in.","To hit a door to let people know you are there."],["laugh","The joke made us laugh.","To make sounds when something is funny."],["listen","Listen to the birds singing.","To pay attention to sounds."],["machine","The washing machine is noisy.","A tool with moving parts that does work."],["neighbor","Our neighbor has a friendly dog.","A person who lives near you."],["ocean","Whales live in the ocean.","A huge body of salt water."],["pencil","Sharpen your pencil before the test.","A tool for writing or drawing."],["people","Lots of people came to the parade.","Men, women, and children."],["rhyme","Cat and hat rhyme.","Words that end with the same sound."],["scissors","Use the scissors to cut the paper.","A tool with two blades for cutting."],["special","Today is a special day.","Different and important."],["surprise","We threw Mom a surprise party.","Something you did not expect."],["tomorrow","We will go to the zoo tomorrow.","The day after today."],["triangle","A slice of pizza looks like a triangle.","A shape with three sides."],["vacation","We went to the beach on vacation.","Time off from school or work for fun."],["wrinkle","There is a wrinkle in my shirt.","A small fold or line."],["young","The young puppy was very playful.","Not old."],["zipper","My jacket zipper is stuck.","A fastener with metal or plastic teeth."],["February","Valentine's Day is in February.","The second month of the year."]],"level3":[["necessary","Is it necessary to bring a jacket?","Needed; must be done."],["separate","Separate the eggs into two bowls.","To pull apart; not together."],["definitely","I will definitely come to your game.","Without any doubt."],["calendar","Mark the date on the calendar.","A chart showing the days and months."],["embarrass","Please don't embarrass me in front of my friends.","To make someone feel shy or ashamed."],["environment","Recycling helps the environment.","The natural world around us."],["government","The government built a new highway.","The group that runs a country or state."],["immediately","Come inside immediately, it's starting to storm.","Right away."],["knowledge","Her knowledge of space is amazing.","What you know and understand."],["lightning","Lightning lit up the whole sky.","A flash of light in the sky during a storm."],["mischief","The kittens got into mischief.","Playful trouble."],["noticeable","There was a noticeable change in the weather.","Easy to see or notice."],["occasion","Grandpa's birthday is a big occasion.","A special event or time."],["parallel","The train tracks run parallel.","Side by side and never meeting."],["recommend","I recommend the chocolate ice cream.","To suggest something as good."],["rhythm","Tap your foot to the rhythm.","A repeated pattern of beats."],["schedule","Check the schedule for practice times.","A plan of when things will happen."],["sincerely","I sincerely hope you feel better.","Honestly and truly."],["temperature","The temperature dropped below freezing.","How hot or cold something is."],["unusual","We saw an unusual bird in the yard.","Not common; strange."],["vegetable","Broccoli is my least favorite vegetable.","A plant part you eat, like a carrot or bean."],["Wednesday","We have art class on Wednesday.","The day after Tuesday."],["argument","They had an argument over the remote.","A disagreement with words."],["beginning","Read from the beginning of the chapter.","The start of something."],["believe","I believe you can do it.","To think something is true."],["business","Aunt May runs a baking business.","A company or the work it does."],["conscience","His conscience told him to return the wallet.","Your inner sense of right and wrong."],["disappear","The magician made the coin disappear.","To go out of sight."],["exaggerate","Don't exaggerate, the fish wasn't that big.","To say something is bigger than it really is."],["foreign","She speaks a foreign language.","From another country."],["grammar","Check your grammar before you hand it in.","The rules for how words go together."],["guarantee","I can't guarantee we'll win.","A promise that something will happen."],["height","Measure the height of the door.","How tall something is."],["independent","My little brother wants to be independent.","Able to do things on your own."],["jealous","He was jealous of his friend's new bike.","Wanting what someone else has."],["leisure","Reading is my favorite leisure activity.","Free time for rest or fun."],["mysterious","A mysterious package arrived at the door.","Hard to explain or understand."],["nuisance","The buzzing fly was a nuisance.","Something annoying."],["opportunity","This trip is a great opportunity to learn.","A chance to do something."],["privilege","Staying up late is a privilege.","A special right or advantage."],["restaurant","We ate dinner at a new restaurant.","A place where you buy and eat meals."],["silhouette","We saw the silhouette of a deer at dusk.","A dark shape against a light background."],["souvenir","I bought a souvenir at the museum.","Something you keep to remember a place."],["thorough","Do a thorough job cleaning your room.","Careful and complete."],["vacuum","Please vacuum the living room.","A machine that sucks up dirt."],["cylinder","A soup can is a cylinder.","A shape like a can, with round ends."],["muscle","Lifting weights builds muscle.","Body tissue that helps you move."],["pharaoh","The pharaoh was buried in a pyramid.","A ruler of ancient Egypt."],["sergeant","The sergeant gave the order.","A rank of officer in the army or police."],["awkward","There was an awkward silence.","Clumsy or uncomfortable."]],"level4":[["accommodate","The cabin can accommodate eight guests.","To make room for or provide what is needed."],["acquiesce","She acquiesced to her brother's choice of movie.","To accept or agree without protest."],["bureaucracy","Getting a permit meant dealing with bureaucracy.","A system of government with many rules and offices."],["camouflage","The moth's camouflage matched the bark.","Coloring or covering that helps something blend in."],["conscientious","She is a conscientious student.","Careful to do what is right and do it well."],["connoisseur","Uncle Ray is a connoisseur of barbecue.","An expert judge of fine things."],["dilemma","Pie or cake? What a dilemma.","A hard choice between two options."],["entrepreneur","The young entrepreneur opened a lemonade stand.","A person who starts a business."],["fluorescent","He wore a fluorescent safety vest.","Glowing brightly, especially in vivid colors."],["gauge","Check the tire pressure gauge.","A tool that measures; or to estimate."],["hemorrhage","Doctors worked quickly to stop the hemorrhage.","Heavy bleeding."],["idiosyncrasy","Humming while cooking is an idiosyncrasy of Dad's.","A habit or quirk unique to a person."],["liaison","She served as liaison between the school and parents.","A person who connects two groups."],["maneuver","The pilot made a tricky maneuver.","A skillful movement."],["millennium","The city celebrated the new millennium.","A period of a thousand years."],["mnemonic","We used a mnemonic to learn the planets.","A trick that helps you remember something."],["onomatopoeia","Sizzle is an example of onomatopoeia.","A word that sounds like what it means, like buzz."],["pneumonia","Grandpa recovered from pneumonia.","A serious lung infection."],["questionnaire","Please fill out the questionnaire.","A list of questions to collect information."],["rendezvous","Our rendezvous point is the big oak tree.","A planned meeting."],["reminiscence","Her reminiscence of the farm made everyone smile.","A memory of the past."],["sacrilegious","Putting ketchup on that steak felt sacrilegious.","Disrespectful to something sacred."],["surveillance","The store has video surveillance.","Close watch over someone or something."],["threshold","He carried the box over the threshold.","The bottom of a doorway; or a starting point."],["ubiquitous","Smartphones are ubiquitous now.","Found everywhere."],["vacillate","She vacillated between the two colleges.","To keep changing your mind."],["weird","That was a weird dream.","Strange or unusual."],["xylophone","My sister practices the xylophone.","An instrument with wooden bars you hit."],["yacht","A white yacht was docked at the marina.","A large, fancy boat."],["zucchini","We grilled zucchini for dinner.","A long green summer squash."],["chrysanthemum","She planted a yellow chrysanthemum.","A flower with many layered petals."],["Fahrenheit","It was 90 degrees Fahrenheit.","A temperature scale where water freezes at 32 degrees."],["guerrilla","The guerrilla fighters hid in the hills.","A fighter in a small, independent group."],["hierarchy","There's a clear hierarchy in a wolf pack.","A ranking from highest to lowest."],["irresistible","The smell of fresh bread was irresistible.","Too tempting to resist."],["kaleidoscope","The view looked like a kaleidoscope.","A tube of mirrors showing changing colored patterns."],["lieutenant","The lieutenant led the patrol.","A rank of officer."],["mischievous","The mischievous puppy hid my slipper.","Playfully causing trouble."],["nauseous","The boat ride made him nauseous.","Feeling sick to your stomach."],["occurrence","Snow in May is a rare occurrence.","Something that happens."],["perseverance","Her perseverance paid off at the finish line.","Not giving up."],["quarantine","The new fish went into quarantine.","Keeping someone apart to stop the spread of disease."],["rhinoceros","The rhinoceros charged across the plain.","A large animal with one or two horns on its nose."],["tsunami","The tsunami warning sent everyone uphill.","A giant ocean wave caused by an earthquake."],["unnecessary","Bringing three umbrellas was unnecessary.","Not needed."],["vicissitude","The family weathered the vicissitudes of farm life.","A change of circumstances, often unwelcome."],["wholly","I am wholly convinced you're right.","Completely."],["bourgeois","They mocked his bourgeois taste in furniture.","Relating to the comfortable middle class."],["chauffeur","The chauffeur opened the car door.","A person paid to drive someone."],["archaeology","She wants to study archaeology in Egypt.","The study of the past through digging up old objects."]]};
+const LEVELS = {"level1": {"name": "Little Bees", "age": "age 5", "free": 1}, "level2": {"name": "Busy Bees", "age": "age 8", "free": 0}, "level3": {"name": "Honey Masters", "age": "grown-ups", "free": 0}, "level4": {"name": "Queen Bees", "age": "grown-up champs", "free": 0}};
+const CHEERS = ["Buzz-tastic!","Bee-utiful spelling!","You're the bee's knees!","Sweet as honey!","Hive five!","Un-bee-lievable!"];
+// const NUDGES = ["So close! Try once more.","Almost! Listen again and have another go.","Nice try! One more chance."];
+
+/* ---------- State ---------- */
+const DEFAULT_PLAYERS=[
+  {name:"Little Bee",level:"level1"},{name:"Middle Bee",level:"level2"},
+  {name:"Grown-up 1",level:"level3"},{name:"Grown-up 2",level:"level3"},
+  {name:"Grown-up 3",level:"level4"},{name:"Grown-up 4",level:"level4"}
+];
+const MIN_PLAYERS=2, MAX_PLAYERS=12, LIVES=2;
+const STEPS=["Warm-up words","Getting harder","Tough words","Toughest words"];
+let S={screen:"setup",players:DEFAULT_PLAYERS.map(p=>({...p})),C:null,quitArmed:false};
+try{const saved=JSON.parse(localStorage.getItem("bee-setup")||"null");if(saved&&saved.players&&saved.players.length){S.players=saved.players.slice(0,MAX_PLAYERS).map(p=>({name:p.name,level:LEVELS[p.level]?p.level:"level3"}))}}catch(e){}
+try{const t=JSON.parse(localStorage.getItem("bee-circle")||"null");if(t&&t.C){S.C=t.C;S.screen=t.C.champion!=null?"end":t.C.phase}}catch(e){}
+function saveSetup(){try{localStorage.setItem("bee-setup",JSON.stringify({players:S.players}))}catch(e){}}
+function saveGame(){try{if(S.C)localStorage.setItem("bee-circle",JSON.stringify({C:S.C}));else localStorage.removeItem("bee-circle")}catch(e){}}
+
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+/* ---------- Circle game ----------
+   Everyone alive spells once per round, in seat order. Each miss costs a heart at the end
+   of the round, unless everyone left missed (then nobody loses one). Two hearts lost = out.
+   Words come from each player's own level; the word lists run easier to harder, and the
+   window of words slides toward the hard end as players are knocked out. */
+const P=id=>S.C.players[id];
+const alive=()=>S.C.players.filter(p=>p.lives>0);
+
+function startGame(){
+  const list=S.players.filter(p=>p.name.trim());
+  if(list.length<MIN_PLAYERS) return;
+  const used={};for(const k in WORDS) used[k]=[];
+  S.C={players:list.map((p,i)=>({id:i,name:p.name.trim(),level:p.level,lives:LIVES,right:0,outOrder:null})),
+       start:list.length,round:0,queue:[],pos:0,results:{},used,outCount:0,champion:null,phase:"turn",cur:null,shown:false,summary:null};
+  startRound();
+}
+function step(){ // 0..3, rises as players drop out
+  const C=S.C; if(C.start<=2) return Math.min(3,Math.floor(C.round/2));
+  return Math.min(3,Math.floor(C.outCount/(C.start-1)*4));
+}
+function drawWord(level){
+  const C=S.C, list=WORDS[level], n=list.length;
+  const st=step(), width=Math.ceil(n*0.4), lo=Math.floor((n-width)*st/3), hi=lo+width;
+  if(C.used[level].length>=n) C.used[level]=[];
+  let pool=[];for(let i=lo;i<hi;i++) if(!C.used[level].includes(i)) pool.push(i);
+  if(!pool.length) for(let i=0;i<n;i++) if(!C.used[level].includes(i)) pool.push(i);
+  const i=pick(pool); C.used[level].push(i);
+  const [word,sentence,definition]=list[i];
+  return {word,sentence,definition};
+}
+function startRound(){
+  const C=S.C;
+  C.round++;C.queue=alive().map(p=>p.id);C.pos=0;C.results={};C.summary=null;
+  newTurn();
+}
+function newTurn(){
+  const C=S.C;
+  C.cur=drawWord(P(C.queue[C.pos]).level);C.shown=false;C.phase="turn";S.screen="turn";
+  saveGame();render();scrollTo(0,0);
+}
+function speller(){return P(S.C.queue[S.C.pos])}
+function readerFor(){const C=S.C,q=C.queue;if(q.length<2)return null;return P(q[(C.pos+1)%q.length])}
+function markWord(ok){
+  const C=S.C,p=speller();
+  if(C.results[p.id]!=null) return;
+  C.results[p.id]=ok;
+  if(ok){p.right++;confetti()}
+  C.last={id:p.id,ok,word:C.cur.word};
+  C.pos++;
+  if(C.pos>=C.queue.length) endRound(); else newTurn();
+}
+function skipWord(){const C=S.C;C.cur=drawWord(speller().level);saveGame();render()}
+function endRound(){
+  const C=S.C, ids=C.queue, missed=ids.filter(id=>!C.results[id]);
+  const before=step();
+  const sum={round:C.round,allMissed:missed.length===ids.length,lostHeart:[],out:[],right:ids.filter(id=>C.results[id])};
+  if(!sum.allMissed){
+    for(const id of missed){
+      const p=P(id);p.lives--;
+      if(p.lives<=0){p.outOrder=++C.outCount;sum.out.push(id)} else sum.lostHeart.push(id);
+    }
+  }
+  sum.harder=step()>before;
+  C.summary=sum;
+  const live=alive();
+  if(live.length===1){C.champion=live[0].id;C.phase="end";S.screen="end";saveGame();render();setTimeout(confetti,200);return}
+  C.phase="round";S.screen="round";saveGame();render();scrollTo(0,0);
+}
+
+/* ---------- Icons ---------- */
+const BEE='<svg width="52" height="52" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="22" cy="20" rx="11" ry="8" fill="#cfe3ff" opacity=".9" transform="rotate(-25 22 20)"/><ellipse cx="38" cy="18" rx="11" ry="8" fill="#cfe3ff" opacity=".9" transform="rotate(20 38 18)"/><ellipse cx="32" cy="38" rx="18" ry="14" fill="#F4B324"/><path d="M26 25.5c-1.6 3.8-1.6 21.2 0 25M36 24.5c1.6 4.2 1.6 22.6 0 27" stroke="#1B2740" stroke-width="5" fill="none"/><circle cx="46" cy="34" r="2.4" fill="#1B2740"/><path d="M14 38l-5 1.5" stroke="#1B2740" stroke-width="3" stroke-linecap="round"/></svg>';
+const heart=on=>`<svg class="heart ${on?"on":""}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8.2 3.2 4.5 6.9 4.5c2.1 0 3.6 1.1 5.1 3 1.5-1.9 3-3 5.1-3 3.7 0 5.9 3.7 4.4 7.3C19.5 16.4 12 21 12 21z"/></svg>`;
+const lives=p=>`<span class="lives" aria-label="${p.lives} of ${LIVES} hearts left">${Array.from({length:LIVES},(_,i)=>heart(i<p.lives)).join("")}</span>`;
+
+/* ---------- Render ---------- */
+const app=document.getElementById("app");
+function render(){
+  if(S.screen==="setup") renderSetup();
+  else if(S.screen==="turn") renderTurn();
+  else if(S.screen==="round") renderRound();
+  else renderEnd();
+}
+
+function renderSetup(){
+  const n=S.players.filter(p=>p.name.trim()).length;
+  app.innerHTML=`
+  <header class="brand">${BEE}<div><h1>Buzzword Family Bee</h1><p>Spell around the circle. Two misses and you're out.</p></div></header>
+  <section class="card">
+    <div class="row between"><div class="label">Who's playing? (in seat order)</div><span class="count">${n} player${n===1?"":"s"}</span></div>
+    <div class="players">
+      ${S.players.map((p,i)=>`
+      <div class="player">
+        <input id="pname-${i}" value="${esc(p.name)}" aria-label="Player ${i+1} name" maxlength="16" data-i="${i}" autocomplete="off">
+        <button class="remove" data-rm="${i}" aria-label="Remove ${esc(p.name)}" ${S.players.length<=MIN_PLAYERS?"disabled":""}>×</button>
+        <div class="levels" role="group" aria-label="Word level for ${esc(p.name)}">
+          ${Object.entries(LEVELS).map(([k,l])=>`<button class="lvl" data-lvl="${k}" data-i="${i}" aria-pressed="${p.level===k}"><b>${l.name}</b><small>${l.age}</small></button>`).join("")}
+        </div>
+      </div>`).join("")}
+    </div>
+    ${S.players.length<MAX_PLAYERS?`<button class="btn ghost small" id="add">+ Add a player</button>`:`<p class="muted">12 players is the most a game can have.</p>`}
+    <button class="btn" id="start" ${n<MIN_PLAYERS?"disabled":""}>Start the bee</button>
+  </section>
+  <section class="card">
+    <div class="label">How it works</div>
+    <ul class="rules">
+      <li>Everyone starts with two hearts ${heart(true)}${heart(true)}. Each miss costs a heart, and losing both means you're out.</li>
+      <li>Go around the circle. The next player in line holds the tablet and reads the word, its meaning, and the sentence. The speller spells it out loud.</li>
+      <li>Everyone spells words from their own level, so kids and grown-ups play fair.</li>
+      <li>Each time someone is knocked out, the words get a little harder for everyone, inside their own level.</li>
+      <li>If everyone left misses in the same round, nobody loses a heart.</li>
+      <li>The last speller standing wins.</li>
+    </ul>
+  </section>`;
+  app.querySelectorAll(".player input").forEach(inp=>inp.addEventListener("input",e=>{S.players[+e.target.dataset.i].name=e.target.value;saveSetup();const c=app.querySelector(".count"),k=S.players.filter(p=>p.name.trim()).length;c.textContent=`${k} player${k===1?"":"s"}`;document.getElementById("start").disabled=k<MIN_PLAYERS}));
+  app.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>{S.players[+b.dataset.i].level=b.dataset.lvl;saveSetup();renderSetup()});
+  app.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{S.players.splice(+b.dataset.rm,1);saveSetup();renderSetup()});
+  const add=document.getElementById("add");
+  if(add) add.onclick=()=>{S.players.push({name:`Player ${S.players.length+1}`,level:"level3"});saveSetup();renderSetup();const last=document.getElementById(`pname-${S.players.length-1}`);last&&(last.focus(),last.select())};
+  document.getElementById("start").onclick=startGame;
+}
+
+function circleStrip(){
+  const C=S.C, cur=S.screen==="turn"?C.queue[C.pos]:null;
+  return `<div class="scores" aria-label="Players">${C.players.map(p=>{
+    const r=C.results[p.id];
+    return `<div class="chip ${p.id===cur?"now":""} ${p.lives<=0?"gone":""}">${esc(p.name)}${lives(p)}${r==null?"":`<span class="mark ${r?"ok":"miss"}">${r?"✓":"✗"}</span>`}</div>`}).join("")}</div>`;
+}
+function quitButton(){
+  return `<div class="row center"><button class="btn ghost small" id="quit">${S.quitArmed?"Tap again to end the game":"End game"}</button></div>`;
+}
+function wireQuit(){
+  const b=document.getElementById("quit"); if(!b) return;
+  b.onclick=()=>{
+    if(!S.quitArmed){S.quitArmed=true;render();setTimeout(()=>{if(S.quitArmed){S.quitArmed=false;render()}},4000);return}
+    S.quitArmed=false;S.C=null;S.screen="setup";saveGame();render();
+  };
+}
+
+function renderTurn(){
+  const C=S.C, sp=speller(), c=C.cur, L=LEVELS[sp.level], rd=readerFor();
+  const head=`<div class="turn-head"><h2>${esc(sp.name)} spells</h2><span class="badge">${L.name} · ${STEPS[step()]}</span></div>`;
+  let inner="";
+  if(!C.shown){
+    const last=C.last&&C.pos>0?`<div class="feedback ${C.last.ok?"yes":"no"}" role="status"><p class="banner">${esc(P(C.last.id).name)} ${C.last.ok?"spelled it right!":`missed. The word was <b>${esc(C.last.word)}</b>.`}</p></div>`:"";
+    inner=`${last}
+    <div class="cover">
+      ${BEE}
+      <h3>Hand the tablet to ${rd?`<b>${esc(rd.name)}</b>`:"a reader"}</h3>
+      <p class="muted">${esc(sp.name)}, no peeking! ${rd?esc(rd.name)+" reads your word.":""}</p>
+      <button class="btn" id="show">I'm the reader. Show the word</button>
+    </div>`;
+  } else {
+    const letters=c.word.toUpperCase().split("").map(ch=>`<span>${esc(ch)}</span>`).join("");
+    inner=`
+    <div class="host">
+      <div class="label">Say this word</div>
+      <div class="the-word">${esc(c.word)}</div>
+      <div class="spell" aria-label="Spelling: ${esc(c.word.split("").join(" "))}">${letters}</div>
+      ${L.free?`<p class="tip">Little Bee tip: you can tell them it has <b>${c.word.length} letters</b>.</p>`:""}
+      <div class="clue"><div class="label">What it means</div><p>${esc(c.definition)}</p></div>
+      <div class="clue"><div class="label">Use it in a sentence</div><p>${esc(c.sentence)}</p></div>
+    </div>
+    <div class="judge">
+      <button class="big-yes" id="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>Spelled it right</button>
+      <button class="big-no" id="no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>Missed it</button>
+    </div>
+    <button class="btn ghost small" id="skip">Skip this word</button>`;
+  }
+  app.innerHTML=`<div class="label center">Round ${C.round} · speller ${C.pos+1} of ${C.queue.length}</div>${circleStrip()}<section class="card">${head}${inner}</section>${quitButton()}`;
+  const on=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn};
+  on("show",()=>{C.shown=true;saveGame();render()});
+  on("yes",()=>markWord(true));on("no",()=>markWord(false));on("skip",skipWord);
+  wireQuit();
+}
+
+function renderRound(){
+  const C=S.C, s=C.summary, names=ids=>ids.map(id=>`<b>${esc(P(id).name)}</b>`).join(", ");
+  let lines=[];
+  if(s.allMissed) lines.push(`Everyone missed this round, so nobody loses a heart. Keep going!`);
+  else {
+    if(s.right.length) lines.push(`Spelled it right: ${names(s.right)}.`);
+    if(s.lostHeart.length) lines.push(`Lost a heart: ${names(s.lostHeart)}.`);
+    if(s.out.length) lines.push(`Out of the bee: ${names(s.out)}. Great spelling!`);
+    if(!s.lostHeart.length&&!s.out.length) lines.push(`Nobody missed. Hive five, everyone!`);
+  }
+  if(s.harder) lines.push(`The words just got harder: <b>${STEPS[step()]}</b>.`);
+  const live=alive(), sorted=live.slice().sort((a,b)=>b.lives-a.lives), out=C.players.filter(p=>p.lives<=0).sort((a,b)=>b.outOrder-a.outOrder);
+  app.innerHTML=`
+  <header class="brand">${BEE}<div><h1>Round ${s.round} done</h1><p>${live.length} spellers left in the circle</p></div></header>
+  <section class="card">
+    ${lines.map(l=>`<p class="summary">${l}</p>`).join("")}
+    <button class="btn" id="next">Start round ${C.round+1}</button>
+  </section>
+  <section class="card">
+    <div class="standings">
+      <div class="group"><h3>Still in</h3><ul>${sorted.map(p=>`<li class="prow"><span class="pname">${esc(p.name)}<small>${LEVELS[p.level].name}</small></span>${lives(p)}</li>`).join("")}</ul></div>
+      ${out.length?`<div class="group"><h3>Out</h3><ul>${out.map(p=>`<li class="prow out"><span class="pname">${esc(p.name)}<small>${LEVELS[p.level].name}</small></span>${lives(p)}</li>`).join("")}</ul></div>`:""}
+    </div>
+  </section>
+  ${quitButton()}`;
+  document.getElementById("next").onclick=startRound;
+  wireQuit();
+}
+
+function renderEnd(){
+  const C=S.C, champ=P(C.champion);
+  const ranked=C.players.slice().sort((x,y)=>(y.outOrder??999)-(x.outOrder??999));
+  app.innerHTML=`
+  <header class="brand">${BEE}<div><h1>${esc(champ.name)} wins the bee!</h1><p>Last speller standing after ${C.round} round${C.round===1?"":"s"}.</p></div></header>
+  <section class="card">
+    <div class="podium">
+      ${ranked.map((p,i)=>`
+      <div class="place ${i===0?"first":""}"><span class="medal">${i+1}</span><span>${esc(p.name)}<small>${LEVELS[p.level].name} · ${p.right} word${p.right===1?"":"s"} spelled right</small></span>${lives(p)}</div>`).join("")}
+    </div>
+    <div class="row"><button class="btn" id="again">Same players, play again</button><button class="btn ghost" id="setup">Change players</button></div>
+  </section>`;
+  document.getElementById("again").onclick=startGame;
+  document.getElementById("setup").onclick=()=>{S.C=null;S.screen="setup";saveGame();render()};
+}
+
+/* ---------- Confetti ---------- */
+const cv=document.getElementById("confetti"),cx=cv.getContext("2d");
+let bits=[],raf=null;
+function confetti(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  cv.width=innerWidth;cv.height=innerHeight;
+  const cols=["#F4B324","#1B2740","#46c98a","#7fb2ff","#ff8fa3"];
+  for(let i=0;i<90;i++) bits.push({x:innerWidth/2+(Math.random()-.5)*120,y:innerHeight*.35,vx:(Math.random()-.5)*12,vy:-Math.random()*12-4,r:Math.random()*6+4,c:pick(cols),a:Math.random()*6,life:0});
+  if(!raf) tick();
+}
+function tick(){
+  cx.clearRect(0,0,cv.width,cv.height);
+  bits.forEach(b=>{b.vy+=.35;b.x+=b.vx;b.y+=b.vy;b.a+=.2;b.life++;
+    cx.save();cx.translate(b.x,b.y);cx.rotate(b.a);cx.fillStyle=b.c;
+    cx.beginPath();for(let k=0;k<6;k++){const t=k*Math.PI/3;cx.lineTo(Math.cos(t)*b.r,Math.sin(t)*b.r)}cx.fill();cx.restore()});
+  bits=bits.filter(b=>b.y<cv.height+20&&b.life<200);
+  raf=bits.length?requestAnimationFrame(tick):(cx.clearRect(0,0,cv.width,cv.height),null);
+}
+
+render();
+</script>
+<script>
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+</script>
+</body>
+</html>

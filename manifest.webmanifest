@@ -1,0 +1,16 @@
+{
+  "name": "Buzzword Family Bee",
+  "short_name": "Family Bee",
+  "description": "A family spelling bee: go around the circle, two misses and you're out.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EAF1F8",
+  "theme_color": "#F4B324",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
